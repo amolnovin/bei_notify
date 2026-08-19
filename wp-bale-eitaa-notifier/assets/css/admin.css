@@ -1,0 +1,856 @@
+/**
+ * استایل صفحه تنظیمات «اعلان‌رسان بله و ایتا»
+ * طراحی مدرن: کارت‌ها، گرید واکنش‌گرا، سوییچ‌های toggle
+ */
+
+.bei-wrap {
+	--bei-bale: #16a34a;
+	--bei-bale-dark: #0d7a3e;
+	--bei-eitaa: #f4832a;
+	--bei-ink: #0f172a;
+	--bei-muted: #64748b;
+	--bei-border: #e2e8f0;
+	--bei-bg-soft: #f8fafc;
+	--bei-radius: 14px;
+	--bei-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px rgba(15, 23, 42, 0.07);
+
+	margin: 16px 0 24px;
+	font-size: 13px;
+}
+
+/* ---------- هدر ---------- */
+
+.bei-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 14px;
+	padding: 26px 30px;
+	border-radius: var(--bei-radius);
+	color: #fff;
+	background:
+		radial-gradient(120% 180% at 100% 0%, rgba(244, 131, 42, 0.85) 0%, rgba(244, 131, 42, 0) 55%),
+		linear-gradient(115deg, #0e9f6e 0%, #16a34a 60%, #22c55e 100%);
+	box-shadow: var(--bei-shadow);
+}
+
+.bei-header h1 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	color: #fff;
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.4;
+}
+
+.bei-subtitle {
+	margin: 6px 0 0;
+	color: rgba(255, 255, 255, 0.88);
+	font-size: 13px;
+}
+
+.bei-header-meta {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.bei-badge {
+	padding: 5px 14px;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+	backdrop-filter: blur(4px);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+/* ---------- گرید ---------- */
+
+.bei-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 20px;
+	align-items: start;
+	margin-top: 20px;
+}
+
+@media (max-width: 1200px) {
+	.bei-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (min-width: 1201px) {
+	.bei-side {
+		position: sticky;
+		top: 48px;
+	}
+}
+
+/* ---------- کارت ---------- */
+
+.bei-card {
+	margin-bottom: 20px;
+	border: 1px solid var(--bei-border);
+	border-radius: var(--bei-radius);
+	background: #fff;
+	box-shadow: var(--bei-shadow);
+	overflow: hidden;
+}
+
+.bei-card-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 24px;
+	border-bottom: 1px solid var(--bei-border);
+	background: linear-gradient(180deg, #fbfcfd 0%, #fff 100%);
+}
+
+.bei-card-head h2 {
+	margin: 0;
+	padding: 0;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--bei-ink);
+}
+
+.bei-card-body {
+	padding: 8px 24px 20px;
+}
+
+.bei-icon {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	flex: none;
+	border-radius: 10px;
+	font-size: 17px;
+}
+
+.bei-icon--bale  { background: #e7f8ef; }
+.bei-icon--eitaa { background: #fdf0e4; }
+.bei-icon--tg    { background: #e0f2fe; }
+.bei-icon--wa    { background: #d1fae5; }
+.bei-icon--mail  { background: #e9f1ff; }
+.bei-icon--plug  { background: #f3e8ff; }
+.bei-icon--wp    { background: #fff4e5; }
+.bei-icon--test  { background: #fef9c3; }
+.bei-icon--api   { background: #e0f2fe; }
+.bei-icon--docs  { background: #f1f5f9; }
+.bei-icon--proxy { background: #dbeafe; }
+
+/* ---------- فیلدها ---------- */
+
+.bei-field {
+	margin: 18px 0;
+}
+
+.bei-label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--bei-ink);
+}
+
+.bei-input {
+	width: 100%;
+	max-width: 540px;
+	padding: 9px 14px;
+	border: 1px solid #cbd5e1;
+	border-radius: 10px;
+	background: #fff;
+	font-size: 13px;
+	color: var(--bei-ink);
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bei-input:hover {
+	border-color: #94a3b8;
+}
+
+.bei-input:focus {
+	outline: none;
+	border-color: var(--bei-bale);
+	box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+}
+
+.bei-input--ltr {
+	direction: ltr;
+	text-align: left;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12.5px;
+}
+
+.bei-input--area {
+	max-width: 640px;
+	font-family: inherit;
+	font-size: 13px;
+	resize: vertical;
+}
+
+.bei-hint {
+	margin: 6px 0 0;
+	color: var(--bei-muted);
+	font-size: 12.5px;
+	line-height: 1.8;
+}
+
+.bei-hint code,
+.bei-integration-name + .bei-hint code {
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: #f1f5f9;
+	color: #475569;
+	font-size: 11.5px;
+}
+
+.bei-mt {
+	margin-top: 14px;
+}
+
+.bei-options-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 22px;
+}
+
+/* ---------- سوییچ (toggle) ---------- */
+
+.bei-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	user-select: none;
+	font-size: 13px;
+	color: var(--bei-ink);
+}
+
+.bei-switch--disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.bei-switch input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.bei-track {
+	position: relative;
+	width: 42px;
+	height: 24px;
+	flex: none;
+	border-radius: 999px;
+	background: #cbd5e1;
+	transition: background 0.2s ease;
+}
+
+.bei-track::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	inset-inline-start: 3px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.35);
+	transition: transform 0.2s ease;
+}
+
+.bei-switch input:checked + .bei-track {
+	background: var(--bei-bale);
+}
+
+.bei-switch input:checked + .bei-track::after {
+	transform: translateX(18px);
+}
+
+[dir="rtl"] .bei-switch input:checked + .bei-track::after {
+	transform: translateX(-18px);
+}
+
+.bei-switch input:focus-visible + .bei-track {
+	box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.35);
+}
+
+.bei-switch-label {
+	font-weight: 600;
+}
+
+/* ---------- ردیف‌های اتصال ---------- */
+
+.bei-integration {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 10px;
+	padding: 13px 16px;
+	border: 1px solid var(--bei-border);
+	border-radius: 12px;
+	background: #fcfdfe;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bei-integration:hover {
+	border-color: #cbd5e1;
+	box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+}
+
+.bei-integration-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--bei-ink);
+}
+
+.bei-integration-side {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.bei-chip {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.bei-chip--ok   { background: #dcfce7; color: #15803d; }
+.bei-chip--warn { background: #fef3c7; color: #b45309; }
+.bei-chip--tg   { background: #dbeafe; color: #1d4ed8; }
+.bei-chip--off  { background: #f1f5f9; color: #64748b; }
+
+/* ---------- دکمه‌ها ---------- */
+
+.bei-btn {
+	border-radius: 10px !important;
+	padding: 8px 18px !important;
+	font-weight: 600 !important;
+}
+
+.bei-btn-primary {
+	border: 0 !important;
+	color: #fff !important;
+	background: linear-gradient(135deg, var(--bei-bale) 0%, var(--bei-bale-dark) 100%) !important;
+	box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35) !important;
+	transition: filter 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease !important;
+}
+
+.bei-btn-primary:hover,
+.bei-btn-primary:focus {
+	color: #fff !important;
+	filter: brightness(1.07);
+	box-shadow: 0 6px 18px rgba(22, 163, 74, 0.4) !important;
+}
+
+.bei-btn-primary:active {
+	transform: translateY(1px);
+}
+
+.bei-btn-block {
+	display: flex;
+	width: 100%;
+	justify-content: center;
+}
+
+.bei-test-buttons {
+	display: grid;
+	gap: 10px;
+}
+
+.bei-save-bar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin: 4px 0 24px;
+	padding: 18px 24px;
+	border: 1px solid var(--bei-border);
+	border-radius: var(--bei-radius);
+	background: #fff;
+	box-shadow: var(--bei-shadow);
+}
+
+.bei-save-bar .bei-hint {
+	margin: 0;
+}
+
+/* ---------- اعلان‌های نتیجه تست ---------- */
+
+.bei-notice {
+	margin: 16px 0;
+	padding: 14px 18px;
+	border: 1px solid;
+	border-radius: 12px;
+	font-size: 13px;
+	line-height: 1.8;
+}
+
+.bei-notice--success {
+	border-color: #86efac;
+	background: #f0fdf4;
+	color: #166534;
+}
+
+.bei-notice--error {
+	border-color: #fca5a5;
+	background: #fef2f2;
+	color: #991b1b;
+}
+
+.bei-notice code {
+	display: block;
+	margin-top: 6px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: rgba(15, 23, 42, 0.06);
+	direction: ltr;
+	text-align: left;
+	font-size: 11.5px;
+	word-break: break-all;
+}
+
+/* ---------- کادر REST ---------- */
+
+.bei-codebox {
+	display: flex;
+	align-items: stretch;
+	gap: 8px;
+	margin-top: 8px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: #0f172a;
+}
+
+.bei-codebox code {
+	flex: 1;
+	color: #86efac;
+	font-size: 12px;
+	word-break: break-all;
+	line-height: 1.7;
+}
+
+.bei-copy {
+	flex: none;
+	padding: 6px 14px;
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.08);
+	color: #e2e8f0;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.bei-copy:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.bei-copy.is-copied {
+	color: #4ade80;
+	border-color: rgba(74, 222, 128, 0.5);
+}
+
+.bei-pre {
+	margin: 12px 0 0;
+	padding: 14px 16px;
+	border-radius: 12px;
+	background: #0f172a;
+	color: #cbd5e1;
+	font-size: 12px;
+	line-height: 1.8;
+	overflow: auto;
+}
+
+.bei-pre code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ---------- فهرست مستندات ---------- */
+
+.bei-docs {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.bei-docs a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 14px;
+	border: 1px solid var(--bei-border);
+	border-radius: 10px;
+	color: #334155;
+	font-size: 13px;
+	text-decoration: none;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bei-docs a:hover {
+	border-color: #cbd5e1;
+	background: var(--bei-bg-soft);
+	color: var(--bei-ink);
+}
+
+.bei-docs a span {
+	color: var(--bei-muted);
+}
+
+/* ---------- فیلدهای ردیفی و پراکسی ---------- */
+
+.bei-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 18px;
+}
+
+.bei-row .bei-field {
+	flex: 1 1 200px;
+}
+
+.bei-input--short {
+	max-width: 220px;
+}
+
+.bei-select {
+	padding: 8px 12px;
+	border: 1px solid #cbd5e1;
+	border-radius: 10px;
+	background: #fff;
+	font-size: 13px;
+	color: var(--bei-ink);
+	min-width: 160px;
+}
+
+.bei-select:focus {
+	outline: none;
+	border-color: var(--bei-bale);
+	box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+}
+
+.bei-info-box {
+	margin-top: 18px;
+	padding: 14px 16px;
+	border: 1px solid #bfdbfe;
+	border-radius: 12px;
+	background: #eff6ff;
+	color: #1e40af;
+	font-size: 12.5px;
+	line-height: 2.1;
+}
+
+.bei-info-box code {
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: rgba(30, 64, 175, 0.08);
+	direction: ltr;
+	font-size: 11.5px;
+}
+
+/* ---------- شناسه‌یاب ---------- */
+
+.bei-icon--find { background: #e0f2fe; }
+
+.bei-finder {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.bei-finder-box {
+	padding: 16px 18px;
+	border: 1px solid var(--bei-border);
+	border-radius: 12px;
+	background: var(--bei-bg-soft);
+}
+
+.bei-finder-box h3 {
+	margin: 0 0 10px;
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--bei-ink);
+}
+
+.bei-steps {
+	margin: 0 0 12px;
+	padding-inline-start: 20px;
+	color: #475569;
+	font-size: 12.5px;
+	line-height: 2.1;
+}
+
+.bei-finder-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.bei-finder-actions form {
+	margin: 0;
+}
+
+.bei-finder-actions .bei-btn {
+	padding: 6px 12px !important;
+	font-size: 12.5px !important;
+	white-space: normal;
+}
+
+.bei-found-list {
+	margin-bottom: 18px;
+}
+
+.bei-find-result {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-bottom: 8px;
+	padding: 12px 16px;
+	border: 1px solid #cbd5e1;
+	border-radius: 12px;
+	background: #fff;
+}
+
+.bei-find-meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+}
+
+.bei-id-big {
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.5px;
+	color: var(--bei-bale-dark);
+	direction: ltr;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.bei-find-title {
+	color: var(--bei-muted);
+	font-size: 12.5px;
+}
+
+.bei-fill {
+	padding: 6px 14px;
+	border: 1px solid var(--bei-bale);
+	border-radius: 8px;
+	background: #f0fdf4;
+	color: #166534;
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bei-fill:hover {
+	background: var(--bei-bale);
+	color: #fff;
+}
+
+.bei-notice--success .bei-fill {
+	margin-top: 8px;
+	display: inline-block;
+}
+
+/* ---------- تب‌ها (پیام‌های مدیر / مشتریان) ---------- */
+
+.bei-tabs {
+	margin-top: 14px;
+}
+
+.bei-tab-btn {
+	margin-inline-end: 8px;
+	padding: 8px 18px;
+	border: 1px solid #cbd5e1;
+	border-bottom: 0;
+	border-radius: 10px 10px 0 0;
+	background: #eef2f7;
+	color: #475569;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bei-tab-btn.is-active {
+	background: #fff;
+	color: var(--bei-ink);
+	border-color: var(--bei-border);
+}
+
+.bei-tab-btn:hover {
+	color: var(--bei-ink);
+}
+
+.bei-tab-panel {
+	display: none;
+	padding: 14px 16px;
+	border: 1px solid var(--bei-border);
+	border-radius: 0 12px 12px 12px;
+	background: #fff;
+}
+
+.bei-tab-panel.is-active {
+	display: block;
+}
+
+/* ---------- جدول وضعیت‌های ووکامرس ---------- */
+
+.bei-wc-table {
+	display: block;
+	margin-top: 14px;
+}
+
+.bei-wc-row {
+	display: grid;
+	grid-template-columns: 70px 170px 130px minmax(380px, 1fr);
+	gap: 10px;
+	align-items: center;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--bei-border);
+}
+
+.bei-wc-row--3col {
+	grid-template-columns: 70px minmax(220px, 1fr) 170px;
+}
+
+.bei-wc-row--head {
+	background: var(--bei-bg-soft);
+	border-radius: 10px 10px 0 0;
+	font-weight: 700;
+	font-size: 12px;
+	color: var(--bei-muted);
+}
+
+.bei-wc-label {
+	font-weight: 600;
+	font-size: 12.5px;
+}
+
+.bei-wc-label code {
+	display: block;
+	margin-top: 2px;
+	font-size: 10.5px;
+	color: var(--bei-muted);
+}
+
+.bei-select--sm {
+	min-width: 110px;
+	padding: 5px 8px;
+	font-size: 12px;
+}
+
+.bei-input--wcmsg {
+	width: 100%;
+	min-width: 380px;
+	max-width: 100%;
+	font-size: 12px;
+	padding: 8px 12px;
+	resize: vertical;
+	line-height: 1.9;
+}
+
+@media (max-width: 1100px) {
+	.bei-wc-row {
+		grid-template-columns: 60px 1fr 1fr;
+	}
+	.bei-wc-row--head {
+		display: none;
+	}
+	.bei-input--wcmsg {
+		min-width: 100%;
+	}
+}
+
+/* ---------- فهرست تشخیص وضعیت نمایش دکمه تسویه حساب ---------- */
+
+.bei-diag {
+	margin: 10px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.bei-diag li {
+	padding: 4px 0;
+	font-size: 12.5px;
+	font-weight: 600;
+}
+
+.bei-diag .is-ok  { color: #15803d; }
+.bei-diag .is-bad { color: #b91c1c; }
+
+/* ---------- دکمه‌های فعال‌سازی اعلان مشتری ---------- */
+
+.bei-subscribe {
+	margin: 14px 0;
+	padding: 14px 16px;
+	border: 1px solid var(--bei-border);
+	border-radius: 12px;
+	background: var(--bei-bg-soft);
+	font-size: 13px;
+	line-height: 2.2;
+}
+
+.bei-sub-btn {
+	display: inline-block;
+	margin-inline-start: 8px;
+	padding: 5px 14px;
+	border: 1px solid var(--bei-bale);
+	border-radius: 999px;
+	background: #f0fdf4;
+	color: #166534;
+	font-size: 12.5px;
+	font-weight: 700;
+	text-decoration: none;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bei-sub-btn:hover {
+	background: var(--bei-bale);
+	color: #fff;
+}
+
+/* ---------- واکنش‌گرایی ---------- */
+
+@media (max-width: 782px) {
+	.bei-header {
+		padding: 20px;
+	}
+
+	.bei-card-head,
+	.bei-card-body {
+		padding-inline: 16px;
+	}
+
+	.bei-input {
+		max-width: 100%;
+	}
+
+	.bei-save-bar {
+		padding: 14px 16px;
+	}
+}

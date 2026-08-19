@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پیش‌نمایش پنل تنظیمات بله و ایتا</title>
+<style>
+body { margin:0; padding:20px; background:#f0f4f8; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif; }
+/**
+ * استایل صفحه تنظیمات «اعلان‌رسان بله و ایتا»
+ * طراحی مدرن: کارت‌ها، گرید واکنش‌گرا، سوییچ‌های toggle
+ */
+
+.bei-wrap {
+	--bei-bale: #16a34a;
+	--bei-bale-dark: #0d7a3e;
+	--bei-eitaa: #f4832a;
+	--bei-ink: #0f172a;
+	--bei-muted: #64748b;
+	--bei-border: #e2e8f0;
+	--bei-bg-soft: #f8fafc;
+	--bei-radius: 14px;
+	--bei-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px rgba(15, 23, 42, 0.07);
+
+	margin: 16px 0 24px;
+	font-size: 13px;
+}
+
+/* ---------- هدر ---------- */
+
+.bei-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 14px;
+	padding: 26px 30px;
+	border-radius: var(--bei-radius);
+	color: #fff;
+	background:
+		radial-gradient(120% 180% at 100% 0%, rgba(244, 131, 42, 0.85) 0%, rgba(244, 131, 42, 0) 55%),
+		linear-gradient(115deg, #0e9f6e 0%, #16a34a 60%, #22c55e 100%);
+	box-shadow: var(--bei-shadow);
+}
+
+.bei-header h1 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	color: #fff;
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.4;
+}
+
+.bei-subtitle {
+	margin: 6px 0 0;
+	color: rgba(255, 255, 255, 0.88);
+	font-size: 13px;
+}
+
+.bei-header-meta {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.bei-badge {
+	padding: 5px 14px;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+	backdrop-filter: blur(4px);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+/* ---------- گرید ---------- */
+
+.bei-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 20px;
+	align-items: start;
+	margin-top: 20px;
+}
+
+@media (max-width: 1200px) {
+	.bei-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (min-width: 1201px) {
+	.bei-side {
+		position: sticky;
+		top: 48px;
+	}
+}
+
+/* ---------- کارت ---------- */
+
+.bei-card {
+	margin-bottom: 20px;
+	border: 1px solid var(--bei-border);
+	border-radius: var(--bei-radius);
+	background: #fff;
+	box-shadow: var(--bei-shadow);
+	overflow: hidden;
+}
+
+.bei-card-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 24px;
+	border-bottom: 1px solid var(--bei-border);
+	background: linear-gradient(180deg, #fbfcfd 0%, #fff 100%);
+}
+
+.bei-card-head h2 {
+	margin: 0;
+	padding: 0;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--bei-ink);
+}
+
+.bei-card-body {
+	padding: 8px 24px 20px;
+}
+
+.bei-icon {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	flex: none;
+	border-radius: 10px;
+	font-size: 17px;
+}
+
+.bei-icon--bale  { background: #e7f8ef; }
+.bei-icon--eitaa { background: #fdf0e4; }
+.bei-icon--tg    { background: #e0f2fe; }
+.bei-icon--wa    { background: #d1fae5; }
+.bei-icon--mail  { background: #e9f1ff; }
+.bei-icon--plug  { background: #f3e8ff; }
+.bei-icon--wp    { background: #fff4e5; }
+.bei-icon--test  { background: #fef9c3; }
+.bei-icon--api   { background: #e0f2fe; }
+.bei-icon--docs  { background: #f1f5f9; }
+.bei-icon--proxy { background: #dbeafe; }
+
+/* ---------- فیلدها ---------- */
+
+.bei-field {
+	margin: 18px 0;
+}
+
+.bei-label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--bei-ink);
+}
+
+.bei-input {
+	width: 100%;
+	max-width: 540px;
+	padding: 9px 14px;
+	border: 1px solid #cbd5e1;
+	border-radius: 10px;
+	background: #fff;
+	font-size: 13px;
+	color: var(--bei-ink);
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bei-input:hover {
+	border-color: #94a3b8;
+}
+
+.bei-input:focus {
+	outline: none;
+	border-color: var(--bei-bale);
+	box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+}
+
+.bei-input--ltr {
+	direction: ltr;
+	text-align: left;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12.5px;
+}
+
+.bei-input--area {
+	max-width: 640px;
+	font-family: inherit;
+	font-size: 13px;
+	resize: vertical;
+}
+
+.bei-hint {
+	margin: 6px 0 0;
+	color: var(--bei-muted);
+	font-size: 12.5px;
+	line-height: 1.8;
+}
+
+.bei-hint code,
+.bei-integration-name + .bei-hint code {
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: #f1f5f9;
+	color: #475569;
+	font-size: 11.5px;
+}
+
+.bei-mt {
+	margin-top: 14px;
+}
+
+.bei-options-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 22px;
+}
+
+/* ---------- سوییچ (toggle) ---------- */
+
+.bei-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	user-select: none;
+	font-size: 13px;
+	color: var(--bei-ink);
+}
+
+.bei-switch input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.bei-track {
+	position: relative;
+	width: 42px;
+	height: 24px;
+	flex: none;
+	border-radius: 999px;
+	background: #cbd5e1;
+	transition: background 0.2s ease;
+}
+
+.bei-track::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	inset-inline-start: 3px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.35);
+	transition: transform 0.2s ease;
+}
+
+.bei-switch input:checked + .bei-track {
+	background: var(--bei-bale);
+}
+
+.bei-switch input:checked + .bei-track::after {
+	transform: translateX(18px);
+}
+
+[dir="rtl"] .bei-switch input:checked + .bei-track::after {
+	transform: translateX(-18px);
+}
+
+.bei-switch input:focus-visible + .bei-track {
+	box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.35);
+}
+
+.bei-switch-label {
+	font-weight: 600;
+}
+
+/* ---------- ردیف‌های اتصال ---------- */
+
+.bei-integration {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 10px;
+	padding: 13px 16px;
+	border: 1px solid var(--bei-border);
+	border-radius: 12px;
+	background: #fcfdfe;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bei-integration:hover {
+	border-color: #cbd5e1;
+	box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+}
+
+.bei-integration-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--bei-ink);
+}
+
+.bei-integration-side {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.bei-chip {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.bei-chip--ok   { background: #dcfce7; color: #15803d; }
+.bei-chip--warn { background: #fef3c7; color: #b45309; }
+.bei-chip--tg   { background: #dbeafe; color: #1d4ed8; }
+.bei-chip--off  { background: #f1f5f9; color: #64748b; }
+
+/* ---------- دکمه‌ها ---------- */
+
+.bei-btn {
+	border-radius: 10px !important;
+	padding: 8px 18px !important;
+	font-weight: 600 !important;
+}
+
+.bei-btn-primary {
+	border: 0 !important;
+	color: #fff !important;
+	background: linear-gradient(135deg, var(--bei-bale) 0%, var(--bei-bale-dark) 100%) !important;
+	box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35) !important;
+	transition: filter 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease !important;
+}
+
+.bei-btn-primary:hover,
+.bei-btn-primary:focus {
+	color: #fff !important;
+	filter: brightness(1.07);
+	box-shadow: 0 6px 18px rgba(22, 163, 74, 0.4) !important;
+}
+
+.bei-btn-primary:active {
+	transform: translateY(1px);
+}
+
+.bei-btn-block {
+	display: flex;
+	width: 100%;
+	justify-content: center;
+}
+
+.bei-test-buttons {
+	display: grid;
+	gap: 10px;
+}
+
+.bei-save-bar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin: 4px 0 24px;
+	padding: 18px 24px;
+	border: 1px solid var(--bei-border);
+	border-radius: var(--bei-radius);
+	background: #fff;
+	box-shadow: var(--bei-shadow);
+}
+
+.bei-save-bar .bei-hint {
+	margin: 0;
+}
+
+/* ---------- اعلان‌های نتیجه تست ---------- */
+
+.bei-notice {
+	margin: 16px 0;
+	padding: 14px 18px;
+	border: 1px solid;
+	border-radius: 12px;
+	font-size: 13px;
+	line-height: 1.8;
+}
+
+.bei-notice--success {
+	border-color: #86efac;
+	background: #f0fdf4;
+	color: #166534;
+}
+
+.bei-notice--error {
+	border-color: #fca5a5;
+	background: #fef2f2;
+	color: #991b1b;
+}
+
+.bei-notice code {
+	display: block;
+	margin-top: 6px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: rgba(15, 23, 42, 0.06);
+	direction: ltr;
+	text-align: left;
+	font-size: 11.5px;
+	word-break: break-all;
+}
+
+/* ---------- کادر REST ---------- */
+
+.bei-codebox {
+	display: flex;
+	align-items: stretch;
+	gap: 8px;
+	margin-top: 8px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: #0f172a;
+}
+
+.bei-codebox code {
+	flex: 1;
+	color: #86efac;
+	font-size: 12px;
+	word-break: break-all;
+	line-height: 1.7;
+}
+
+.bei-copy {
+	flex: none;
+	padding: 6px 14px;
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.08);
+	color: #e2e8f0;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.bei-copy:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.bei-copy.is-copied {
+	color: #4ade80;
+	border-color: rgba(74, 222, 128, 0.5);
+}
+
+.bei-pre {
+	margin: 12px 0 0;
+	padding: 14px 16px;
+	border-radius: 12px;
+	background: #0f172a;
+	color: #cbd5e1;
+	font-size: 12px;
+	line-height: 1.8;
+	overflow: auto;
+}
+
+.bei-pre code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ---------- فهرست مستندات ---------- */
+
+.bei-docs {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.bei-docs a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 14px;
+	border: 1px solid var(--bei-border);
+	border-radius: 10px;
+	color: #334155;
+	font-size: 13px;
+	text-decoration: none;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bei-docs a:hover {
+	border-color: #cbd5e1;
+	background: var(--bei-bg-soft);
+	color: var(--bei-ink);
+}
+
+.bei-docs a span {
+	color: var(--bei-muted);
+}
+
+/* ---------- فیلدهای ردیفی و پراکسی ---------- */
+
+.bei-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 18px;
+}
+
+.bei-row .bei-field {
+	flex: 1 1 200px;
+}
+
+.bei-input--short {
+	max-width: 220px;
+}
+
+.bei-select {
+	padding: 8px 12px;
+	border: 1px solid #cbd5e1;
+	border-radius: 10px;
+	background: #fff;
+	font-size: 13px;
+	color: var(--bei-ink);
+	min-width: 160px;
+}
+
+.bei-select:focus {
+	outline: none;
+	border-color: var(--bei-bale);
+	box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+}
+
+.bei-info-box {
+	margin-top: 18px;
+	padding: 14px 16px;
+	border: 1px solid #bfdbfe;
+	border-radius: 12px;
+	background: #eff6ff;
+	color: #1e40af;
+	font-size: 12.5px;
+	line-height: 2.1;
+}
+
+.bei-info-box code {
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: rgba(30, 64, 175, 0.08);
+	direction: ltr;
+	font-size: 11.5px;
+}
+
+/* ---------- شناسه‌یاب ---------- */
+
+.bei-icon--find { background: #e0f2fe; }
+
+.bei-finder {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.bei-finder-box {
+	padding: 16px 18px;
+	border: 1px solid var(--bei-border);
+	border-radius: 12px;
+	background: var(--bei-bg-soft);
+}
+
+.bei-finder-box h3 {
+	margin: 0 0 10px;
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--bei-ink);
+}
+
+.bei-steps {
+	margin: 0 0 12px;
+	padding-inline-start: 20px;
+	color: #475569;
+	font-size: 12.5px;
+	line-height: 2.1;
+}
+
+.bei-finder-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.bei-finder-actions form {
+	margin: 0;
+}
+
+.bei-finder-actions .bei-btn {
+	padding: 6px 12px !important;
+	font-size: 12.5px !important;
+	white-space: normal;
+}
+
+.bei-found-list {
+	margin-bottom: 18px;
+}
+
+.bei-find-result {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-bottom: 8px;
+	padding: 12px 16px;
+	border: 1px solid #cbd5e1;
+	border-radius: 12px;
+	background: #fff;
+}
+
+.bei-find-meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+}
+
+.bei-id-big {
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.5px;
+	color: var(--bei-bale-dark);
+	direction: ltr;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.bei-find-title {
+	color: var(--bei-muted);
+	font-size: 12.5px;
+}
+
+.bei-fill {
+	padding: 6px 14px;
+	border: 1px solid var(--bei-bale);
+	border-radius: 8px;
+	background: #f0fdf4;
+	color: #166534;
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bei-fill:hover {
+	background: var(--bei-bale);
+	color: #fff;
+}
+
+.bei-notice--success .bei-fill {
+	margin-top: 8px;
+	display: inline-block;
+}
+
+/* ---------- واکنش‌گرایی ---------- */
+
+@media (max-width: 782px) {
+	.bei-header {
+		padding: 20px;
+	}
+
+	.bei-card-head,
+	.bei-card-body {
+		padding-inline: 16px;
+	}
+
+	.bei-input {
+		max-width: 100%;
+	}
+
+	.bei-save-bar {
+		padding: 14px 16px;
+	}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap bei-wrap" dir="rtl">
+
+  <header class="bei-header">
+    <div>
+      <h1>🚀 اعلان‌رسان بله و ایتا</h1>
+      <p class="bei-subtitle">ارسال خودکار پیام به‌جای تلگرام — پل ایمیل، اتصال به فرم‌ها و ووکامرس، API خارجی</p>
+    </div>
+    <div class="bei-header-meta">
+      <span class="bei-badge">نسخه 2.0.0</span>
+    </div>
+  </header>
+
+  <div class="bei-notice bei-notice--success"><strong>پیام با موفقیت ارسال شد ✅</strong> <code>{"ok":true,"result":{"message_id":85917}}</code></div>
+
+  <div class="bei-grid">
+    <div class="bei-main">
+      <form>
+
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--bale">🟢</span>
+            <div>
+              <h2>پیکربندی بله</h2>
+              <p class="bei-hint">ربات را با @botfather بسازید (ble.ir/botfather) و آن را ادمین کانال/گروه کنید.</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-field">
+              <label class="bei-label" for="p1">توکن ربات</label>
+              <input id="p1" class="bei-input bei-input--ltr" type="text" dir="ltr" value="123456789:abcdIuZmK5qNEm2A1BhUaAg7MPJv1O9KCcBQB2ro" spellcheck="false">
+            </div>
+            <div class="bei-field">
+              <label class="bei-label" for="p2">شناسه گفتگو (chat_id)</label>
+              <input id="p2" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="@myChannel" spellcheck="false">
+              <p class="bei-hint">شناسه عددی گفتگو یا نام کاربری کانال با @</p>
+            </div>
+            <div class="bei-field">
+              <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">استفاده از API کسب‌وکاری بله</span></label>
+              <p class="bei-hint">سقف ارسال بالاتر برای اطلاع‌رسانی انبوه — نیازمند شارژ حساب در business.bale.ai</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--eitaa">🟣</span>
+            <div>
+              <h2>پیکربندی ایتا</h2>
+              <p class="bei-hint">توکن را از پنل ایتایار (eitaayar.ir) یا @botfather ایتا بگیرید و ربات را ادمین کانال/گروه کنید.</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-field">
+              <label class="bei-label" for="p3">توکن ربات</label>
+              <input id="p3" class="bei-input bei-input--ltr" type="text" dir="ltr" value="bot114641:8ac1ab47-9d84-4731-bf8f-8b1486de907e" spellcheck="false">
+            </div>
+            <div class="bei-field">
+              <label class="bei-label" for="p4">شناسه چت (chat_id)</label>
+              <input id="p4" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="myChannel" spellcheck="false">
+              <p class="bei-hint">شناسه عددی یا username کانال بدون @ — برای گروه: لینک دعوت</p>
+            </div>
+          </div>
+        </section>
+
+
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--tg">🟦</span>
+            <div>
+              <h2>پیکربندی تلگرام</h2>
+              <p class="bei-hint">ربات را با @BotFather تلگرام بسازید (t.me/BotFather) و آن را ادمین کانال/گروه کنید. اگر سرور سایت داخل ایران است، از بخش «پراکسی» یا آدرس API جایگزین استفاده کنید.</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-field">
+              <label class="bei-label" for="t1">توکن ربات</label>
+              <input id="t1" class="bei-input bei-input--ltr" type="text" dir="ltr" value="123456789:AAF..." spellcheck="false">
+            </div>
+            <div class="bei-field">
+              <label class="bei-label" for="t2">شناسه گفتگو (chat_id)</label>
+              <input id="t2" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="@myChannel" spellcheck="false">
+              <p class="bei-hint">شناسه عددی یا نام کاربری کانال با @ — برای گروه خصوصی، شناسه عددی را با «شناسه‌یاب» به‌دست آورید</p>
+            </div>
+            <div class="bei-field">
+              <label class="bei-label" for="t3">آدرس API (سفارشی/رله)</label>
+              <input id="t3" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="https://api.telegram.org" spellcheck="false">
+              <p class="bei-hint">خالی = api.telegram.org. برای دور زدن فیلترینگ می‌توانید آدرس یک سرور رله (Reverse Proxy) که روی سرور خارج از ایران دارید را وارد کنید.</p>
+            </div>
+          </div>
+        </section>
+
+
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--wa">💬</span>
+            <div>
+              <h2>پیکربندی واتساپ (مسیر رایگان)</h2>
+              <p class="bei-hint">با درگاه‌های میزبانی‌شده (Green API / Ultramsg) کلاینت واتساپ روی سرور خود درگاه اجرا می‌شود — شما فقط REST می‌فرستید. اگر سرور داخل ایران است و درگاه فیلتر بود، از «آدرس API سفارشی» (رله) یا کارت پراکسی استفاده کنید.</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-row">
+              <div class="bei-field">
+                <label class="bei-label" for="w1">درگاه</label>
+                <select id="w1" class="bei-select">
+                  <option selected>CallMeBot — رایگان</option>
+                  <option>Meta Cloud API — شماره تست رایگان</option>
+                  <option>Green API — پولی</option>
+                  <option>Ultramsg — پولی</option>
+                </select>
+              </div>
+              <div class="bei-field">
+                <label class="bei-label" for="w2">شناسه نمونه</label>
+                <input id="w2" class="bei-input bei-input--ltr" type="text" dir="ltr" value="7100123456" spellcheck="false">
+              </div>
+            </div>
+            <div class="bei-row">
+              <div class="bei-field">
+                <label class="bei-label" for="w3">توکن درگاه</label>
+                <input id="w3" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="apiTokenInstance" spellcheck="false">
+              </div>
+              <div class="bei-field">
+                <label class="bei-label" for="w4">شماره مقصد (chatId)</label>
+                <input id="w4" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="7912xxxxxxx@c.us" spellcheck="false">
+              </div>
+            </div>
+            <div class="bei-field">
+              <label class="bei-label" for="w5">آدرس API (سفارشی/رله)</label>
+              <input id="w5" class="bei-input bei-input--ltr" type="text" dir="ltr" placeholder="https://wa-relay.example.com" spellcheck="false">
+            </div>
+            <div class="bei-info-box">
+              <strong>🆓 مسیر ۱ — CallMeBot (رایگان، ساده‌ترین):</strong><br>
+              ۱) شماره ربات CallMeBot را در واتساپ ذخیره کنید و پیام «I allow callmebot to send me messages» بفرستید — apikey رایگان می‌گیرید.<br>
+              ۲) apikey را در «توکن درگاه» و شماره خودتان را (با کد کشور) در «شماره مقصد» بگذارید — تمام! پیام‌ها به واتساپ خودتان می‌رسد.<br>
+              <strong>🆓 مسیر ۲ — شماره تست رایگان متا (رسمی):</strong><br>
+              ۳) در business.facebook.com اکانت بیزینس رایگان بسازید و از WhatsApp → API Setup «شماره تست» رایگان بگیرید (Phone Number ID + توکن).<br>
+              ۴) تا ۵ شماره را در بخش To تأیید کنید — ارسال به این شماره‌ها بدون قالب و بدون هزینه است.<br>
+              نکته: شماره +98 پشتیبانی نمی‌شود؛ و برای سرور داخل ایران، آدرس رله یا پراکسی لازم است.
+            </div>
+          </div>
+        </section>
+
+        
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--proxy">🌐</span>
+            <div>
+              <h2>پراکسی — دور زدن فیلترینگ</h2>
+              <p class="bei-hint">برای سرورهای داخل ایران که به api.telegram.org دسترسی ندارند. پراکسی فقط روی درخواست‌های پیام‌رسان‌های انتخاب‌شده اعمال می‌شود.</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-field">
+              <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">فعال‌سازی پراکسی برای درخواست‌های API</span></label>
+            </div>
+            <div class="bei-row">
+              <div class="bei-field">
+                <label class="bei-label" for="x1">نوع پراکسی</label>
+                <select id="x1" class="bei-select">
+                  <option>HTTP</option>
+                  <option selected>SOCKS5</option>
+                </select>
+              </div>
+              <div class="bei-field">
+                <label class="bei-label" for="x2">آدرس پراکسی</label>
+                <input id="x2" class="bei-input bei-input--ltr" type="text" dir="ltr" value="1.2.3.4" spellcheck="false">
+              </div>
+              <div class="bei-field">
+                <label class="bei-label" for="x3">پورت</label>
+                <input id="x3" class="bei-input bei-input--ltr bei-input--short" type="text" dir="ltr" value="1080" spellcheck="false">
+              </div>
+            </div>
+            <div class="bei-field">
+              <span class="bei-label">اعمال پراکسی برای:</span>
+              <div class="bei-options-row">
+                <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">تلگرام</span></label>
+                <label class="bei-switch"><input type="checkbox"><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">بله</span></label>
+                <label class="bei-switch"><input type="checkbox"><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">ایتا</span></label>
+              </div>
+            </div>
+            <div class="bei-info-box">
+              <strong>راهکارهای دور زدن فیلترینگ تلگرام:</strong><br>
+              ۱) اگر سایت روی سرور خارج از ایران است، هیچ اقدامی لازم نیست — فیلترینگ فقط دستگاه‌های داخل ایران را محدود می‌کند.<br>
+              ۲) آدرس API جایگزین/رله (کارت تلگرام) — سرور شخصی شما خارج از ایران که api.telegram.org را پروکسی می‌کند.<br>
+              ۳) پراکسی همین بخش — مخصوص سرورهای داخل ایران.<br>
+              ۴) ثابت‌های سراسری وردپرس در wp-config.php (برای HTTP Proxy):<br>
+              <code dir="ltr">define( 'WP_PROXY_HOST', '1.2.3.4' ); define( 'WP_PROXY_PORT', '1080' );</code>
+            </div>
+          </div>
+        </section>
+
+        <!-- پل ایمیل -->
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--mail">📧</span>
+            <div>
+              <h2>پل ایمیل سراسری</h2>
+              <p class="bei-hint">هر ایمیلی که هر افزونه‌ای بفرستد، همزمان به پیام‌رسان هم می‌رود — مثل سرویس پیامک متصل به ایمیل</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-field">
+              <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">فوروارد ایمیل‌های سایت به پیام‌رسان</span></label>
+            </div>
+            <div class="bei-field">
+              <span class="bei-label">مقصد ارسال:</span>
+              <div class="bei-options-row">
+                <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">بله</span></label>
+                <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">ایتا</span></label>
+                <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">تلگرام</span></label>
+              </div>
+            </div>
+            <div class="bei-field">
+              <label class="bei-label" for="p5">فیلتر موضوع (اختیاری)</label>
+              <textarea id="p5" class="bei-input bei-input--area" rows="3" placeholder="هر خط = یک عبارت، مثلاً: سفارش جدید"></textarea>
+              <p class="bei-hint">فقط ایمیل‌هایی ارسال می‌شوند که موضوعشان یکی از این عبارت‌ها را داشته باشد. خالی = ارسال همه.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--plug">🔌</span>
+            <div>
+              <h2>اتصال به فرم‌ها و فروشگاه‌ساز</h2>
+              <p class="bei-hint">هر گزینه با یک سوییچ فعال می‌شود — جزئیات کامل فرم/سفارش به پیام‌رسان می‌رود</p>
+            </div>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-integration">
+              <div>
+                <div class="bei-integration-name">Contact Form 7</div>
+                <div class="bei-hint"><code dir="ltr">wpcf7_mail_sent</code></div>
+              </div>
+              <div class="bei-integration-side">
+                <span class="bei-chip bei-chip--ok">نصب است</span>
+                <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span></label>
+              </div>
+            </div>
+            <div class="bei-integration">
+              <div>
+                <div class="bei-integration-name">WPForms</div>
+                <div class="bei-hint"><code dir="ltr">wpforms_process_complete</code></div>
+              </div>
+              <div class="bei-integration-side">
+                <span class="bei-chip bei-chip--warn">نصب نیست</span>
+                <label class="bei-switch"><input type="checkbox"><span class="bei-track" aria-hidden="true"></span></label>
+              </div>
+            </div>
+            <div class="bei-integration">
+              <div>
+                <div class="bei-integration-name">ووکامرس — سفارش جدید</div>
+                <div class="bei-hint"><code dir="ltr">woocommerce_new_order</code></div>
+              </div>
+              <div class="bei-integration-side">
+                <span class="bei-chip bei-chip--ok">نصب است</span>
+                <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span></label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bei-card">
+          <div class="bei-card-head">
+            <span class="bei-icon bei-icon--wp">📢</span>
+            <h2>رویدادهای وردپرس</h2>
+          </div>
+          <div class="bei-card-body">
+            <div class="bei-field">
+              <label class="bei-switch"><input type="checkbox" checked><span class="bei-track" aria-hidden="true"></span><span class="bei-switch-label">اطلاع‌رسانی هنگام انتشار نوشته جدید</span></label>
+              <p class="bei-hint">برای رویدادهای دیگر (ثبت‌نام کاربر، نظر جدید و...) از تابع bei_notify() در کد استفاده کنید — نمونه‌ها در راهنما</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="bei-save-bar">
+          <button class="button button-primary bei-btn bei-btn-primary">💾 ذخیره تنظیمات</button>
+          <span class="bei-hint">پس از ذخیره، اتصال را از کارت «تست اتصال» بررسی کنید.</span>
+        </div>
+
+      </form>
+    </div>
+
+    <aside class="bei-side">
+      <section class="bei-card">
+        <div class="bei-card-head">
+          <span class="bei-icon bei-icon--test">🧪</span>
+          <h2>تست اتصال</h2>
+        </div>
+        <div class="bei-card-body">
+          <div class="bei-test-buttons">
+            <button class="button bei-btn bei-btn-primary bei-btn-block">📨 تست همه پیام‌رسان‌ها</button>
+            <button class="button bei-btn bei-btn-block">🟢 تست بله</button>
+            <button class="button bei-btn bei-btn-block">🟣 تست ایتا</button>
+            <button class="button bei-btn bei-btn-block">🟦 تست تلگرام</button>
+            <button class="button bei-btn bei-btn-block">💬 تست واتساپ</button>
+            <button class="button bei-btn bei-btn-block">🌐 تست پراکسی</button>
+            <button class="button bei-btn bei-btn-block">📧 تست پل ایمیل</button>
+          </div>
+          <p class="bei-hint bei-mt">ابتدا تنظیمات را ذخیره کنید، سپس تست بگیرید.</p>
+        </div>
+      </section>
+
+      <section class="bei-card">
+        <div class="bei-card-head">
+          <span class="bei-icon bei-icon--api">🌐</span>
+          <h2>API خارجی (REST)</h2>
+        </div>
+        <div class="bei-card-body">
+          <p class="bei-hint">هر سیستم بیرونی با POST به این آدرس پیام می‌فرستد (احراز هویت: Application Password):</p>
+          <div class="bei-codebox">
+            <code dir="ltr">https://your-site.com/wp-json/bei/v1/notify</code>
+            <button type="button" class="bei-copy" data-bei-copy="url">کپی</button>
+          </div>
+          <pre class="bei-pre" dir="ltr"><code>curl -X POST "https://your-site.com/wp-json/bei/v1/notify" \
+  -u "USERNAME:APP_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"سلام","targets":["bale","eitaa"]}'</code></pre>
+        </div>
+      </section>
+
+      <section class="bei-card">
+        <div class="bei-card-head">
+          <span class="bei-icon bei-icon--docs">📚</span>
+          <h2>مستندات رسمی</h2>
+        </div>
+        <div class="bei-card-body">
+          <ul class="bei-docs">
+            <li><a href="#">مستندات بازوی بله<span>↗</span></a></li>
+            <li><a href="#">راهنمای API ایتایار<span>↗</span></a></li>
+            <li><a href="#">درگاه توسعه‌دهندگان ایتا<span>↗</span></a></li>
+            <li><a href="#">صفحه تست API ایتا<span>↗</span></a></li>
+          </ul>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

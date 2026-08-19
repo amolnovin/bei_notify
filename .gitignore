@@ -1,0 +1,9 @@
+# فایل‌های ساخته‌شده و موقتی — commit نمی‌شوند
+wp-bale-eitaa-notifier.zip
+uploads/
+*.log
+
+# فایل‌های سیستمی
+.DS_Store
+Thumbs.db
+.sudo_as_admin_successful
