@@ -39,6 +39,17 @@ if ( function_exists( 'bei_notify' ) ) {
 
 نمونه‌های آماده برای ۲۰+ افزونه معروف در `wp-bale-eitaa-notifier/examples/integration-examples.php`
 
+## 🔗 اتصال سایر افزونه‌ها (API خارجی)
+
+افزونه‌های دیگر می‌توانند بدون هیچ وابستگی کدی، از طریق REST پیام بفرستند:
+
+```bash
+curl -X POST "https://your-site.com/wp-json/bei/v1/notify"   -u "USERNAME:APP_PASSWORD"   -H "Content-Type: application/json"   -d '{"text":"سلام","targets":["telegram"],"source":"my-plugin"}'
+```
+
+- راهنمای کامل اتصال: **[api-consumers-guide.md](api-consumers-guide.md)**
+- زیرمنوی «سایر افزونه‌ها» در پنل، فهرست مصرف‌کنندگان را با نام/تعداد/زمان/IP نشان می‌دهد
+
 ## 🌐 رله چندسایتی تلگرام (Cloudflare Worker)
 
 فایل `telegram-relay-worker.js` یک رله چندسایتی است: هر تعداد سایت با ربات‌های مختلف می‌توانند همزمان از یک رله استفاده کنند. دو دربان اختیاری دارد:
@@ -61,7 +72,8 @@ if ( function_exists( 'bei_notify' ) ) {
 ├── test-relay.php                   ← تست رله از خط فرمان
 ├── test-send.php                    ← تست سریع توکن‌ها
 ├── settings-preview.html            ← پیش‌نمایش طراحی پنل
-└── bale-eitaa-wp-guide.md           ← راهنمای کامل فارسی
+├── bale-eitaa-wp-guide.md           ← راهنمای کامل فارسی
+└── api-consumers-guide.md           ← راهنمای اتصال سایر افزونه‌ها (REST)
 ```
 
 ## 🛡️ امنیت
