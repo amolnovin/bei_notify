@@ -3,7 +3,7 @@
  * Plugin Name:       اعلان‌رسان بله و ایتا
  * Plugin URI:        https://example.com/bale-eitaa-notifier
  * Description:       ارسال خودکار پیام به تلگرام، بله، ایتا و واتساپ (با مسیرهای رایگان CallMeBot و شماره تست متا)؛ با پل ایمیل سراسری، اتصال آماده به فرم‌ها و ووکامرس، API خارجی، پشتیبانی پراکسی/رله برای دور زدن فیلترینگ و سیستم لایسنس و بروزرسانی خودکار. بر اساس مستندات رسمی core.telegram.org ، docs.bale.ai ، eitaayar.ir/api و callmebot.com
- * Version:           3.1.0
+ * Version:           3.1.1
  * Requires at least: 5.0
  * Requires PHP:      7.2
  * Author:            شما
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BEI_VERSION', '3.1.0' );
+define( 'BEI_VERSION', '3.1.1' );
 define( 'BEI_PLUGIN_FILE', __FILE__ );
 define( 'BEI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

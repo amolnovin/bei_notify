@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.0
+Stable tag: 3.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.1 =
+* اتصال لایسنس به افزونه جداگانه «لایسنس منیجر آمل نوین» (wplm-amolnovin-license-manager) — صفحه لایسنس مستقل (bei-notify-license) حذف شد
+* لینک «لایسنس» در فهرست افزونه‌ها حالا به صفحه منیجر مرکزی اشاره می‌کند
+* در نبود افزونه منیجر، اعلان نصب/فعال‌سازی با دکمه دانلود نمایش داده می‌شود (مدیریت مرکزی همه افزونه‌های آمل نوین)
 
 = 3.1.0 =
 * سیستم لایسنس و بروزرسانی خودکار (WPLM Client Kit آمل نوین): قفل لایسنس + فرم فعال‌سازی در «تنظیمات ← لایسنس افزونه» + نمایش بروزرسانی‌ها در بخش افزونه‌های وردپرس

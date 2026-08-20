@@ -7,8 +7,9 @@
  *  ۲) بروزرسانی خودکار: نسخه‌های جدید در بخش «افزونه‌ها/بروزرسانی‌ها» وردپرس
  *     نمایش داده می‌شوند (از سرور فروش amolnovin.ir)
  *
- * صفحه فعال‌سازی لایسنس زیر منوی اصلی افزونه قرار می‌گیرد:
- *   اعلان‌رسان پیام‌رسان‌ها ← لایسنس افزونه
+ * ⚠️ مدیریت لایسنس (ثبت/فعال‌سازی/بررسی/حذف) در افزونه جداگانه
+ * «لایسنس منیجر آمل نوین» (wplm-amolnovin-license-manager) انجام می‌شود —
+ * این افزونه فقط «کلاینت» است و صفحه لایسنس مستقلی ندارد.
  *
  * @package Bale_Eitaa_Notifier
  */
@@ -59,23 +60,21 @@ final class Bei_License {
 
 		self::$license = new WPLM_Client_Kit_License(
 			array(
-				'api_base'        => self::API_BASE,
-				'product_slug'    => self::PRODUCT_SLUG,
-				'plugin_file'     => BEI_PLUGIN_FILE,
-				'plugin_name'     => __( 'اعلان‌رسان بله، ایتا، تلگرام و واتساپ', 'bale-eitaa-notifier' ),
-				'license_option'  => 'bei_license_key',
-				'status_option'   => 'bei_license_status',
-				'data_option'     => 'bei_license_data',
+				'api_base'       => self::API_BASE,
+				'product_slug'   => self::PRODUCT_SLUG,
+				'plugin_file'    => BEI_PLUGIN_FILE,
+				'plugin_name'    => __( 'اعلان‌رسان بله، ایتا، تلگرام و واتساپ', 'bale-eitaa-notifier' ),
+				'license_option' => 'bei_license_key',
+				'status_option'  => 'bei_license_status',
+				'data_option'    => 'bei_license_data',
 
-				// منوی «تنظیمات» وردپرس همیشه وجود دارد؛ حتی وقتی افزونه قفل است
-				// کاربر از همان‌جا (یا از لینک «لایسنس» در فهرست افزونه‌ها) به
-				// صفحه فعال‌سازی می‌رسد.
-				'menu_parent'     => 'options-general.php',
-				'page_title'      => __( 'فعال‌سازی لایسنس', 'bale-eitaa-notifier' ),
-				'menu_title'      => __( 'لایسنس افزونه', 'bale-eitaa-notifier' ),
-				'individual_page' => true,
-				'manager_page'    => false,
-				'lock_message'    => __( 'برای استفاده از افزونه اعلان‌رسان، ابتدا لایسنس را از منوی «لایسنس افزونه» فعال کنید.', 'bale-eitaa-notifier' ),
+				// حالت «منیجر مرکزی»: صفحه لایسنس فقط در افزونه جداگانه
+				// wplm-amolnovin-license-manager است — این افزونه صفحه‌ای ندارد.
+				'manager_page'     => true,
+				'manager_required' => true,
+				'individual_page'  => false,
+
+				'lock_message' => __( 'برای استفاده از افزونه اعلان‌رسان، ابتدا لایسنس را از «لایسنس منیجر آمل نوین» فعال کنید.', 'bale-eitaa-notifier' ),
 			)
 		);
 
@@ -91,6 +90,36 @@ final class Bei_License {
 				'author'         => 'آمل نوین',
 			)
 		);
+
+		// لینک «لایسنس» در فهرست افزونه‌ها: به صفحه منیجر مرکزی اشاره کند
+		// (لینک پیش‌فرض کیت به صفحه فردی اشاره می‌کند که دیگر وجود ندارد).
+		if ( self::$license instanceof WPLM_Client_Kit_License ) {
+			remove_filter( 'plugin_action_links_' . BEI_PLUGIN_BASENAME, array( self::$license, 'plugin_action_links' ), 10 );
+		}
+		add_filter( 'plugin_action_links_' . BEI_PLUGIN_BASENAME, array( __CLASS__, 'action_links' ), 20, 1 );
+	}
+
+	/**
+	 * لینک «لایسنس» در فهرست افزونه‌ها.
+	 *
+	 * @param array $links لینک‌های فعلی.
+	 * @return array
+	 */
+	public static function action_links( $links ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return $links;
+		}
+
+		if ( class_exists( 'WPLM_Amolnovin_License_Manager' ) ) {
+			$url = WPLM_Amolnovin_License_Manager::page_url( array( 'product' => self::PRODUCT_SLUG ) );
+		} else {
+			// منیجر نصب نیست — کیت اعلان نصب/فعال‌سازی را نمایش می‌دهد.
+			$url = admin_url( 'plugins.php' );
+		}
+
+		array_unshift( $links, '<a href="' . esc_url( $url ) . '">' . esc_html__( 'لایسنس', 'bale-eitaa-notifier' ) . '</a>' );
+
+		return $links;
 	}
 
 	/**
