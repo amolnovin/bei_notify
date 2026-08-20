@@ -7,3 +7,4 @@ uploads/
 .DS_Store
 Thumbs.db
 .sudo_as_admin_successful
+.github/workflows/

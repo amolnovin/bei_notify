@@ -89,7 +89,7 @@ final class Bei_Proxy {
 	}
 
 	/**
-	 * آیا هاست موردنظر جزو دامنه‌های هدف پیام‌رسان‌هاست؟
+	 * آیا هاست موردنظر جزو دامنه‌های هدف پیام‌رسان‌های «فعال» است؟
 	 * (دامنه‌های انتخاب‌شده در تنظیمات + دامنه‌های رله سفارشی)
 	 *
 	 * @param string $host    هاست درخواست.
@@ -99,20 +99,31 @@ final class Bei_Proxy {
 	private function is_messenger_host( $host, $options ) {
 		$targets = empty( $options['tg_proxy_hosts'] ) ? array( 'telegram' ) : $options['tg_proxy_hosts'];
 
+		// نگاشت هر هدف به سوییچ فعال‌سازی پیام‌رسان مربوطه.
+		$enabled_map = array(
+			'telegram'  => ! empty( $options['tg_enabled'] ),
+			'bale'      => ! empty( $options['bale_enabled'] ),
+			'eitaa'     => ! empty( $options['eitaa_enabled'] ),
+			'greenapi'  => ! empty( $options['wa_enabled'] ),
+			'ultramsg'  => ! empty( $options['wa_enabled'] ),
+			'meta'      => ! empty( $options['wa_enabled'] ),
+			'callmebot' => ! empty( $options['wa_enabled'] ),
+		);
+
 		foreach ( $targets as $target ) {
 			if ( isset( self::HOSTS[ $target ] ) && self::HOSTS[ $target ] === $host ) {
-				return true;
+				return ! empty( $enabled_map[ $target ] );
 			}
 		}
 
 		// اگر آدرس API جایگزین (رله) تنظیم شده باشد، دامنه آن هم پذیرفته می‌شود.
-		foreach ( array( 'tg_api_base', 'wa_api_base' ) as $base_key ) {
+		foreach ( array( 'tg_api_base' => 'tg_enabled', 'wa_api_base' => 'wa_enabled' ) as $base_key => $enabled_key ) {
 			if ( empty( $options[ $base_key ] ) ) {
 				continue;
 			}
 			$relay_host = wp_parse_url( $options[ $base_key ], PHP_URL_HOST );
 			if ( $relay_host && $relay_host === $host ) {
-				return true;
+				return ! empty( $options[ $enabled_key ] );
 			}
 		}
 

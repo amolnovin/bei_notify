@@ -65,11 +65,16 @@ final class Bei_Rest {
 			);
 		}
 
+		$enabled = Bei_Settings::enabled_channels();
+
 		if ( empty( $targets ) ) {
-			$targets = array( 'bale', 'eitaa' );
+			$targets = $enabled;
 		}
-		$targets = array_intersect( (array) $targets, array( 'bale', 'eitaa', 'telegram', 'whatsapp' ) );
-		if ( empty( $targets ) ) {
+
+		$requested = array_intersect( (array) $targets, array( 'bale', 'eitaa', 'telegram', 'whatsapp' ) );
+		$targets   = array_intersect( $requested, $enabled );
+
+		if ( empty( $requested ) ) {
 			return new WP_REST_Response(
 				array(
 					'ok'     => false,
@@ -78,6 +83,21 @@ final class Bei_Rest {
 				400
 			);
 		}
+
+		if ( empty( $targets ) ) {
+			return new WP_REST_Response(
+				array(
+					'ok'     => false,
+					'errors' => array( 'targets' => __( 'هیچ‌یک از پیام‌رسان‌های درخواستی فعال نیستند — ابتدا سوییچ فعال‌سازی آن‌ها را در تنظیمات روشن کنید.', 'bale-eitaa-notifier' ) ),
+				),
+				400
+			);
+		}
+
+		// ثبت مصرف‌کننده در فهرست «سایر افزونه‌ها».
+		$source = isset( $_POST['source'] ) ? sanitize_text_field( wp_unslash( $_POST['source'] ) ) : $request->get_param( 'source' );
+		$ip     = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		Bei_Api_Consumers::record( (string) $source, $ip );
 
 		$results = bei()->messenger()->notify( $text, $targets );
 

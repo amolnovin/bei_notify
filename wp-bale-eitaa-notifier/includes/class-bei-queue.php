@@ -40,7 +40,8 @@ final class Bei_Queue {
 	public function notify_async( $text, $targets = array( 'bale', 'eitaa' ) ) {
 		$text = (string) $text;
 
-		$targets = array_intersect( (array) $targets, array( 'bale', 'eitaa', 'telegram', 'whatsapp' ) );
+		// فقط کانال‌های «فعال‌شده» در تنظیمات ارسال می‌شوند.
+		$targets = array_values( array_intersect( (array) $targets, Bei_Settings::enabled_channels() ) );
 		if ( empty( $targets ) ) {
 			$targets = array( 'bale', 'eitaa' );
 		}
@@ -71,6 +72,10 @@ final class Bei_Queue {
 	/**
 	 * تحویل واقعی پیام (از صف) + Retry با Exponential Backoff.
 	 *
+	 * نکته (باگ رفع‌شده): Retry فقط برای کانال‌های «ناموفق» زمان‌بندی می‌شود —
+	 * کانال‌هایی که در تلاش اول موفق بودند دوباره پیام نمی‌گیرند. خطاهای
+	 * پیکربندی (توکن/شناسه تنظیم نشده) هم دائمی‌اند و Retry نمی‌شوند.
+	 *
 	 * @param string $text    متن پیام.
 	 * @param array  $targets کانال‌های مقصد.
 	 * @param int    $attempt شماره تلاش (۰ تا ۲).
@@ -80,24 +85,48 @@ final class Bei_Queue {
 		$attempt = (int) $attempt;
 		$results = bei()->messenger()->notify( (string) $text, (array) $targets );
 
-		$failed = array();
+		$retryable = array();
+		$permanent = array();
 
 		foreach ( (array) $results as $channel => $result ) {
 			if ( is_wp_error( $result ) ) {
-				$failed[ $channel ] = $result->get_error_message();
-				bei()->logger()->log( $channel, 'deliver', 'failed', $text, array( 'attempt' => $attempt + 1, 'error' => $result->get_error_message() ) );
+				bei()->logger()->log(
+					$channel,
+					'deliver',
+					'failed',
+					$text,
+					array( 'attempt' => $attempt + 1, 'error' => $result->get_error_message() )
+				);
+
+				if ( 'bei_config' === $result->get_error_code() ) {
+					// خطای پیکربندی دائمی است — Retry نمی‌شود.
+					$permanent[] = $channel;
+				} else {
+					$retryable[ $channel ] = $result->get_error_message();
+				}
 			} else {
 				bei()->logger()->log( $channel, 'deliver', 'sent', $text, array( 'attempt' => $attempt + 1 ) );
 			}
 		}
 
-		// Retry: خطاهای موقتی (Timeout/DNS/Rate Limit) با تأخیر تصاعدی دوباره تلاش می‌شوند.
-		if ( ! empty( $failed ) && $attempt < 2 ) {
-			$delays = array( 10, 60 );
-			$delay  = isset( $delays[ $attempt ] ) ? $delays[ $attempt ] : 300;
-			$args   = array( $text, $targets, $attempt + 1 );
+		if ( ! empty( $permanent ) ) {
+			bei()->logger()->log( 'system', 'permanent', 'failed', '', array( 'channels' => $permanent ) );
+		}
 
-			bei()->logger()->log( 'system', 'retry', 'scheduled', '', array( 'in_seconds' => $delay, 'attempt' => $attempt + 2 ) );
+		// Retry: فقط کانال‌های ناموفق (نه همه) — جلوگیری از ارسال تکراری به کانال‌های موفق.
+		if ( ! empty( $retryable ) && $attempt < 2 ) {
+			$retry_targets = array_keys( $retryable );
+			$delays        = array( 10, 60 );
+			$delay         = isset( $delays[ $attempt ] ) ? $delays[ $attempt ] : 300;
+			$args          = array( $text, $retry_targets, $attempt + 1 );
+
+			bei()->logger()->log(
+				'system',
+				'retry',
+				'scheduled',
+				'',
+				array( 'channels' => $retry_targets, 'in_seconds' => $delay, 'attempt' => $attempt + 2 )
+			);
 
 			if ( function_exists( 'as_schedule_single_action' ) ) {
 				as_schedule_single_action( time() + $delay, self::HOOK, $args, self::GROUP );

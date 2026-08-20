@@ -35,18 +35,21 @@ final class Bei_Settings {
 	 */
 	public static function defaults() {
 		return array(
-			// اعتبارنامه‌ها.
+			// اعتبارنامه‌ها + سوییچ فعال‌سازی هر پیام‌رسان.
 			'bale_token'       => '',
 			'bale_chat_id'     => '',
 			'bale_bot_username' => '',
 			'bale_business'    => 0,
+			'bale_enabled'     => 1,
 			'eitaa_token'      => '',
 			'eitaa_chat_id'    => '',
+			'eitaa_enabled'    => 1,
 			'tg_token'         => '',
 			'tg_chat_id'       => '',
 			'tg_bot_username'  => '',
 			'tg_api_base'      => '',
 			'tg_relay_key'     => '',
+			'tg_enabled'       => 1,
 
 			// واتساپ (مسیرهای رایگان: CallMeBot و شماره تست متا + درگاه‌های پولی).
 			'wa_gateway'  => 'callmebot',
@@ -54,6 +57,7 @@ final class Bei_Settings {
 			'wa_token'    => '',
 			'wa_chat_id'  => '',
 			'wa_api_base' => '',
+			'wa_enabled'  => 1,
 
 			// پراکسی (برای سرورهای داخل ایران).
 			'tg_proxy_enabled' => 0,
@@ -88,6 +92,31 @@ final class Bei_Settings {
 			// صف ارسال (Action Scheduler / WP-Cron + Retry).
 			'queue_enabled' => 1,
 		);
+	}
+
+	/**
+	 * فهرست کانال‌های فعال (سوییچ فعال‌سازی روشن).
+	 *
+	 * @return array
+	 */
+	public static function enabled_channels() {
+		$options = self::get_options();
+
+		$map = array(
+			'bale'     => 'bale_enabled',
+			'eitaa'    => 'eitaa_enabled',
+			'telegram' => 'tg_enabled',
+			'whatsapp' => 'wa_enabled',
+		);
+
+		$channels = array();
+		foreach ( $map as $channel => $key ) {
+			if ( ! empty( $options[ $key ] ) ) {
+				$channels[] = $channel;
+			}
+		}
+
+		return $channels;
 	}
 
 	/**
@@ -162,7 +191,8 @@ final class Bei_Settings {
 	public function enqueue_assets( $hook_suffix ) {
 		if ( false === strpos( $hook_suffix, 'bei-settings' )
 			&& false === strpos( $hook_suffix, 'bei-woocommerce' )
-			&& false === strpos( $hook_suffix, 'bei-elementor' ) ) {
+			&& false === strpos( $hook_suffix, 'bei-elementor' )
+			&& false === strpos( $hook_suffix, 'bei-api-consumers' ) ) {
 			return;
 		}
 
@@ -183,13 +213,16 @@ final class Bei_Settings {
 		$clean['bale_chat_id']  = isset( $input['bale_chat_id'] ) ? sanitize_textarea_field( wp_unslash( $input['bale_chat_id'] ) ) : '';
 		$clean['bale_bot_username'] = isset( $input['bale_bot_username'] ) ? sanitize_text_field( wp_unslash( $input['bale_bot_username'] ) ) : '';
 		$clean['bale_business'] = empty( $input['bale_business'] ) ? 0 : 1;
+		$clean['bale_enabled']  = empty( $input['bale_enabled'] ) ? 0 : 1;
 		$clean['eitaa_token']   = isset( $input['eitaa_token'] ) ? sanitize_text_field( wp_unslash( $input['eitaa_token'] ) ) : '';
 		$clean['eitaa_chat_id'] = isset( $input['eitaa_chat_id'] ) ? sanitize_textarea_field( wp_unslash( $input['eitaa_chat_id'] ) ) : '';
+		$clean['eitaa_enabled'] = empty( $input['eitaa_enabled'] ) ? 0 : 1;
 		$clean['tg_token']      = isset( $input['tg_token'] ) ? sanitize_text_field( wp_unslash( $input['tg_token'] ) ) : '';
 		$clean['tg_chat_id']    = isset( $input['tg_chat_id'] ) ? sanitize_textarea_field( wp_unslash( $input['tg_chat_id'] ) ) : '';
 		$clean['tg_bot_username'] = isset( $input['tg_bot_username'] ) ? sanitize_text_field( wp_unslash( $input['tg_bot_username'] ) ) : '';
 		$clean['tg_api_base']   = isset( $input['tg_api_base'] ) ? esc_url_raw( wp_unslash( $input['tg_api_base'] ) ) : '';
 		$clean['tg_relay_key']  = isset( $input['tg_relay_key'] ) ? sanitize_text_field( wp_unslash( $input['tg_relay_key'] ) ) : '';
+		$clean['tg_enabled']    = empty( $input['tg_enabled'] ) ? 0 : 1;
 
 		// واتساپ.
 		$clean['wa_gateway']  = ( isset( $input['wa_gateway'] ) && in_array( $input['wa_gateway'], array( 'callmebot', 'greenapi', 'ultramsg', 'meta' ), true ) ) ? $input['wa_gateway'] : 'callmebot';
@@ -197,6 +230,7 @@ final class Bei_Settings {
 		$clean['wa_token']    = isset( $input['wa_token'] ) ? sanitize_text_field( wp_unslash( $input['wa_token'] ) ) : '';
 		$clean['wa_chat_id']  = isset( $input['wa_chat_id'] ) ? sanitize_text_field( wp_unslash( $input['wa_chat_id'] ) ) : '';
 		$clean['wa_api_base'] = isset( $input['wa_api_base'] ) ? esc_url_raw( wp_unslash( $input['wa_api_base'] ) ) : '';
+		$clean['wa_enabled']  = empty( $input['wa_enabled'] ) ? 0 : 1;
 
 		// پراکسی.
 		$clean['tg_proxy_enabled'] = empty( $input['tg_proxy_enabled'] ) ? 0 : 1;
@@ -403,6 +437,13 @@ final class Bei_Settings {
 							</div>
 							<div class="bei-card-body">
 								<div class="bei-field">
+									<?php $this->render_switch( 'bei_options[bale_enabled]', '1', ! empty( $options['bale_enabled'] ), __( 'فعال‌سازی پیام‌رسان بله', 'bale-eitaa-notifier' ) ); ?>
+									<?php if ( empty( $options['bale_enabled'] ) ) : ?>
+										<div class="bei-notice bei-notice--error" style="margin-top:10px"><strong><?php esc_html_e( 'غیرفعال است', 'bale-eitaa-notifier' ); ?></strong> — <?php esc_html_e( 'این پیام‌رسان از همه فهرست‌ها و ارسال‌ها خارج شده است.', 'bale-eitaa-notifier' ); ?></div>
+									<?php endif; ?>
+								</div>
+								<?php if ( ! empty( $options['bale_enabled'] ) ) : ?>
+								<div class="bei-field">
 									<label class="bei-label" for="bei-bale-token"><?php esc_html_e( 'توکن ربات', 'bale-eitaa-notifier' ); ?></label>
 									<input id="bei-bale-token" class="bei-input bei-input--ltr" type="text" dir="ltr"
 										name="bei_options[bale_token]" value="<?php echo esc_attr( $options['bale_token'] ); ?>"
@@ -425,6 +466,7 @@ final class Bei_Settings {
 									<?php $this->render_switch( 'bei_options[bale_business]', '1', ! empty( $options['bale_business'] ), __( 'استفاده از API کسب‌وکاری بله', 'bale-eitaa-notifier' ) ); ?>
 									<p class="bei-hint"><?php esc_html_e( 'سقف ارسال بالاتر برای اطلاع‌رسانی انبوه — نیازمند شارژ حساب در business.bale.ai', 'bale-eitaa-notifier' ); ?></p>
 								</div>
+								<?php endif; ?>
 							</div>
 						</section>
 
@@ -447,6 +489,13 @@ final class Bei_Settings {
 							</div>
 							<div class="bei-card-body">
 								<div class="bei-field">
+									<?php $this->render_switch( 'bei_options[eitaa_enabled]', '1', ! empty( $options['eitaa_enabled'] ), __( 'فعال‌سازی پیام‌رسان ایتا', 'bale-eitaa-notifier' ) ); ?>
+									<?php if ( empty( $options['eitaa_enabled'] ) ) : ?>
+										<div class="bei-notice bei-notice--error" style="margin-top:10px"><strong><?php esc_html_e( 'غیرفعال است', 'bale-eitaa-notifier' ); ?></strong> — <?php esc_html_e( 'این پیام‌رسان از همه فهرست‌ها و ارسال‌ها خارج شده است.', 'bale-eitaa-notifier' ); ?></div>
+									<?php endif; ?>
+								</div>
+								<?php if ( ! empty( $options['eitaa_enabled'] ) ) : ?>
+								<div class="bei-field">
 									<label class="bei-label" for="bei-eitaa-token"><?php esc_html_e( 'توکن ربات', 'bale-eitaa-notifier' ); ?></label>
 									<input id="bei-eitaa-token" class="bei-input bei-input--ltr" type="text" dir="ltr"
 										name="bei_options[eitaa_token]" value="<?php echo esc_attr( $options['eitaa_token'] ); ?>"
@@ -459,6 +508,7 @@ final class Bei_Settings {
 										placeholder="myChannel"><?php echo esc_textarea( $options['eitaa_chat_id'] ); ?></textarea>
 									<p class="bei-hint"><?php esc_html_e( 'چند شناسه مجاز است — شناسه عددی یا username بدون @ (گروه: لینک دعوت)', 'bale-eitaa-notifier' ); ?></p>
 								</div>
+								<?php endif; ?>
 							</div>
 						</section>
 
@@ -480,6 +530,13 @@ final class Bei_Settings {
 								</div>
 							</div>
 							<div class="bei-card-body">
+								<div class="bei-field">
+									<?php $this->render_switch( 'bei_options[tg_enabled]', '1', ! empty( $options['tg_enabled'] ), __( 'فعال‌سازی پیام‌رسان تلگرام', 'bale-eitaa-notifier' ) ); ?>
+									<?php if ( empty( $options['tg_enabled'] ) ) : ?>
+										<div class="bei-notice bei-notice--error" style="margin-top:10px"><strong><?php esc_html_e( 'غیرفعال است', 'bale-eitaa-notifier' ); ?></strong> — <?php esc_html_e( 'این پیام‌رسان از همه فهرست‌ها و ارسال‌ها خارج شده است.', 'bale-eitaa-notifier' ); ?></div>
+									<?php endif; ?>
+								</div>
+								<?php if ( ! empty( $options['tg_enabled'] ) ) : ?>
 								<div class="bei-field">
 									<label class="bei-label" for="bei-tg-token"><?php esc_html_e( 'توکن ربات', 'bale-eitaa-notifier' ); ?></label>
 									<input id="bei-tg-token" class="bei-input bei-input--ltr" type="text" dir="ltr"
@@ -513,6 +570,7 @@ final class Bei_Settings {
 										placeholder="RELAY_KEY در فایل worker" autocomplete="off" spellcheck="false" />
 									<p class="bei-hint"><?php esc_html_e( 'اگر در فایل telegram-relay-worker.js مقدار RELAY_KEY تنظیم کرده‌اید، همان را اینجا وارد کنید — افزونه آن را خودکار به همه درخواست‌های تلگرام اضافه می‌کند (چند سایت می‌توانند با یک کلید مشترک از یک رله استفاده کنند).', 'bale-eitaa-notifier' ); ?></p>
 								</div>
+								<?php endif; ?>
 							</div>
 						</section>
 
@@ -526,6 +584,13 @@ final class Bei_Settings {
 								</div>
 							</div>
 							<div class="bei-card-body">
+								<div class="bei-field">
+									<?php $this->render_switch( 'bei_options[wa_enabled]', '1', ! empty( $options['wa_enabled'] ), __( 'فعال‌سازی پیام‌رسان واتساپ', 'bale-eitaa-notifier' ) ); ?>
+									<?php if ( empty( $options['wa_enabled'] ) ) : ?>
+										<div class="bei-notice bei-notice--error" style="margin-top:10px"><strong><?php esc_html_e( 'غیرفعال است', 'bale-eitaa-notifier' ); ?></strong> — <?php esc_html_e( 'این پیام‌رسان از همه فهرست‌ها و ارسال‌ها خارج شده است.', 'bale-eitaa-notifier' ); ?></div>
+									<?php endif; ?>
+								</div>
+								<?php if ( ! empty( $options['wa_enabled'] ) ) : ?>
 								<div class="bei-row">
 									<div class="bei-field">
 										<label class="bei-label" for="bei-wa-gateway"><?php esc_html_e( 'درگاه', 'bale-eitaa-notifier' ); ?></label>
@@ -574,6 +639,7 @@ final class Bei_Settings {
 									<?php esc_html_e( '۴) تا ۵ شماره را در بخش To (آدرس گیرنده) تأیید کنید — ارسال به این شماره‌ها بدون قالب و بدون هزینه است.', 'bale-eitaa-notifier' ); ?><br />
 									<?php esc_html_e( 'نکته: شماره واتساپ با +98 پشتیبانی نمی‌شود؛ و برای سرور داخل ایران، آدرس رله یا پراکسی لازم است.', 'bale-eitaa-notifier' ); ?>
 								</div>
+								<?php endif; ?>
 							</div>
 						</section>
 
@@ -626,13 +692,20 @@ final class Bei_Settings {
 								<div class="bei-field">
 									<span class="bei-label"><?php esc_html_e( 'دامنه‌های هدف (پراکسی و تنظیمات شبکه):', 'bale-eitaa-notifier' ); ?></span>
 									<div class="bei-options-row">
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'telegram', in_array( 'telegram', $options['tg_proxy_hosts'], true ), __( 'تلگرام', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'bale', in_array( 'bale', $options['tg_proxy_hosts'], true ), __( 'بله', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'eitaa', in_array( 'eitaa', $options['tg_proxy_hosts'], true ), __( 'ایتا', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'greenapi', in_array( 'greenapi', $options['tg_proxy_hosts'], true ), __( 'واتساپ (Green API)', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'ultramsg', in_array( 'ultramsg', $options['tg_proxy_hosts'], true ), __( 'واتساپ (Ultramsg)', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'meta', in_array( 'meta', $options['tg_proxy_hosts'], true ), __( 'واتساپ (Meta)', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'callmebot', in_array( 'callmebot', $options['tg_proxy_hosts'], true ), __( 'واتساپ (CallMeBot)', 'bale-eitaa-notifier' ) ); ?>
+										<?php foreach ( Bei_Settings::enabled_channels() as $bei_ch ) : ?>
+											<?php if ( 'telegram' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'telegram', in_array( 'telegram', $options['tg_proxy_hosts'], true ), __( 'تلگرام', 'bale-eitaa-notifier' ) ); ?>
+											<?php elseif ( 'bale' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'bale', in_array( 'bale', $options['tg_proxy_hosts'], true ), __( 'بله', 'bale-eitaa-notifier' ) ); ?>
+											<?php elseif ( 'eitaa' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'eitaa', in_array( 'eitaa', $options['tg_proxy_hosts'], true ), __( 'ایتا', 'bale-eitaa-notifier' ) ); ?>
+											<?php elseif ( 'whatsapp' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'greenapi', in_array( 'greenapi', $options['tg_proxy_hosts'], true ), __( 'واتساپ (Green API)', 'bale-eitaa-notifier' ) ); ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'ultramsg', in_array( 'ultramsg', $options['tg_proxy_hosts'], true ), __( 'واتساپ (Ultramsg)', 'bale-eitaa-notifier' ) ); ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'meta', in_array( 'meta', $options['tg_proxy_hosts'], true ), __( 'واتساپ (Meta)', 'bale-eitaa-notifier' ) ); ?>
+												<?php $this->render_switch( 'bei_options[tg_proxy_hosts][]', 'callmebot', in_array( 'callmebot', $options['tg_proxy_hosts'], true ), __( 'واتساپ (CallMeBot)', 'bale-eitaa-notifier' ) ); ?>
+											<?php endif; ?>
+										<?php endforeach; ?>
 									</div>
 								</div>
 								<div class="bei-field">
@@ -676,10 +749,17 @@ final class Bei_Settings {
 								<div class="bei-field">
 									<span class="bei-label"><?php esc_html_e( 'مقصد ارسال:', 'bale-eitaa-notifier' ); ?></span>
 									<div class="bei-options-row">
-										<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'bale', in_array( 'bale', $options['email_bridge_targets'], true ), __( 'بله', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'eitaa', in_array( 'eitaa', $options['email_bridge_targets'], true ), __( 'ایتا', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'telegram', in_array( 'telegram', $options['email_bridge_targets'], true ), __( 'تلگرام', 'bale-eitaa-notifier' ) ); ?>
-										<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'whatsapp', in_array( 'whatsapp', $options['email_bridge_targets'], true ), __( 'واتساپ', 'bale-eitaa-notifier' ) ); ?>
+										<?php foreach ( Bei_Settings::enabled_channels() as $bei_ch ) : ?>
+											<?php if ( 'bale' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'bale', in_array( 'bale', $options['email_bridge_targets'], true ), __( 'بله', 'bale-eitaa-notifier' ) ); ?>
+											<?php elseif ( 'eitaa' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'eitaa', in_array( 'eitaa', $options['email_bridge_targets'], true ), __( 'ایتا', 'bale-eitaa-notifier' ) ); ?>
+											<?php elseif ( 'telegram' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'telegram', in_array( 'telegram', $options['email_bridge_targets'], true ), __( 'تلگرام', 'bale-eitaa-notifier' ) ); ?>
+											<?php elseif ( 'whatsapp' === $bei_ch ) : ?>
+												<?php $this->render_switch( 'bei_options[email_bridge_targets][]', 'whatsapp', in_array( 'whatsapp', $options['email_bridge_targets'], true ), __( 'واتساپ', 'bale-eitaa-notifier' ) ); ?>
+											<?php endif; ?>
+										<?php endforeach; ?>
 									</div>
 								</div>
 								<div class="bei-field">
@@ -784,11 +864,19 @@ final class Bei_Settings {
 								<input type="hidden" name="action" value="bei_test" />
 								<?php wp_nonce_field( self::NONCE_ACTION, 'bei_test_nonce' ); ?>
 								<div class="bei-test-buttons">
-									<button class="button bei-btn bei-btn-primary bei-btn-block" type="submit" name="target" value="all">📨 <?php esc_html_e( 'تست همه پیام‌رسان‌ها', 'bale-eitaa-notifier' ); ?></button>
-									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="bale">🟢 <?php esc_html_e( 'تست بله', 'bale-eitaa-notifier' ); ?></button>
-									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="eitaa">🟣 <?php esc_html_e( 'تست ایتا', 'bale-eitaa-notifier' ); ?></button>
-									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="telegram">🟦 <?php esc_html_e( 'تست تلگرام', 'bale-eitaa-notifier' ); ?></button>
-									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="whatsapp">💬 <?php esc_html_e( 'تست واتساپ', 'bale-eitaa-notifier' ); ?></button>
+									<button class="button bei-btn bei-btn-primary bei-btn-block" type="submit" name="target" value="all">📨 <?php esc_html_e( 'تست همه پیام‌رسان‌های فعال', 'bale-eitaa-notifier' ); ?></button>
+									<?php if ( in_array( 'bale', Bei_Settings::enabled_channels(), true ) ) : ?>
+										<button class="button bei-btn bei-btn-block" type="submit" name="target" value="bale">🟢 <?php esc_html_e( 'تست بله', 'bale-eitaa-notifier' ); ?></button>
+									<?php endif; ?>
+									<?php if ( in_array( 'eitaa', Bei_Settings::enabled_channels(), true ) ) : ?>
+										<button class="button bei-btn bei-btn-block" type="submit" name="target" value="eitaa">🟣 <?php esc_html_e( 'تست ایتا', 'bale-eitaa-notifier' ); ?></button>
+									<?php endif; ?>
+									<?php if ( in_array( 'telegram', Bei_Settings::enabled_channels(), true ) ) : ?>
+										<button class="button bei-btn bei-btn-block" type="submit" name="target" value="telegram">🟦 <?php esc_html_e( 'تست تلگرام', 'bale-eitaa-notifier' ); ?></button>
+									<?php endif; ?>
+									<?php if ( in_array( 'whatsapp', Bei_Settings::enabled_channels(), true ) ) : ?>
+										<button class="button bei-btn bei-btn-block" type="submit" name="target" value="whatsapp">💬 <?php esc_html_e( 'تست واتساپ', 'bale-eitaa-notifier' ); ?></button>
+									<?php endif; ?>
 									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="proxy">🌐 <?php esc_html_e( 'تست پراکسی', 'bale-eitaa-notifier' ); ?></button>
 									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="email">📧 <?php esc_html_e( 'تست پل ایمیل', 'bale-eitaa-notifier' ); ?></button>
 								</div>
@@ -812,7 +900,8 @@ final class Bei_Settings {
 							<pre class="bei-pre" dir="ltr"><code>curl -X POST "<?php echo esc_html( $rest_url ); ?>" \
   -u "USERNAME:APP_PASSWORD" \
   -H "Content-Type: application/json" \
-  -d '{"text":"سلام","targets":["bale","eitaa"]}'</code></pre>
+  -d '{"text":"سلام","targets":["bale","eitaa"],"source":"my-plugin"}'</code></pre>
+							<p class="bei-hint"><?php esc_html_e( 'پارامتر source (اختیاری) نام افزونه فراخوان را مشخص می‌کند تا در منوی فرعی «سایر افزونه‌ها» فهرست شود.', 'bale-eitaa-notifier' ); ?></p>
 						</div>
 					</section>
 

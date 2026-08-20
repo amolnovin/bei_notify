@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.0.0
+Stable tag: 3.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.0.1 =
+* رفع باگ Retry: تلاش مجدد فقط برای کانال‌های «ناموفق» زمان‌بندی می‌شود (پیام‌های موفق دیگر تکراری ارسال نمی‌شوند)؛ خطای پیکربندی (توکن/شناسه تنظیم نشده) دائمی است و Retry نمی‌شود
+* سوییچ «فعال‌سازی» برای هر ۴ پیام‌رسان در تنظیمات — پیام‌رسان غیرفعال از همه فهرست‌ها (روش ارسال، پل ایمیل، پراکسی، دکمه‌های تست) مخفی و از ارسال خارج می‌شود
+* زیرمنوی «سایر افزونه‌ها»: فهرست مصرف‌کنندگان API خارجی (REST) با نام source، تعداد ارسال، آخرین زمان و IP + پارامتر source در نمونه curl
 
 = 3.0.0 =
 * (SEC-01) توکن فعال‌سازی اعلان سفارش بازطراحی شد: تصادفی ۳۲ کاراکتری، ذخیره در متای سفارش، انقضای ۷ روزه و یکبارمصرف

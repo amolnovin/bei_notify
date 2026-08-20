@@ -97,6 +97,13 @@ final class Bei_Plugin {
 	private $logger;
 
 	/**
+	 * ماژول فهرست مصرف‌کنندگان API خارجی.
+	 *
+	 * @var Bei_Api_Consumers
+	 */
+	private $api_consumers;
+
+	/**
 	 * نمونه یکتای افزونه را برمی‌گرداند.
 	 *
 	 * @return Bei_Plugin
@@ -126,6 +133,7 @@ final class Bei_Plugin {
 		$this->elementor_forms = new Bei_Elementor_Forms();
 		$this->queue           = new Bei_Queue();
 		$this->logger          = new Bei_Logger();
+		$this->api_consumers   = new Bei_Api_Consumers();
 
 		// بارگذاری ترجمه در init (طبق توصیه وردپرس 6.7+ — جلوگیری از خطای
 		// «Translation loading was triggered too early»).
@@ -212,6 +220,7 @@ final class Bei_Plugin {
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-elementor-forms.php';
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-queue.php';
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-logger.php';
+		require_once BEI_PLUGIN_DIR . 'includes/class-bei-api-consumers.php';
 	}
 
 	/**
@@ -318,5 +327,14 @@ final class Bei_Plugin {
 	 */
 	public function logger() {
 		return $this->logger;
+	}
+
+	/**
+	 * دسترسی به ماژول فهرست مصرف‌کنندگان API.
+	 *
+	 * @return Bei_Api_Consumers
+	 */
+	public function api_consumers() {
+		return $this->api_consumers;
 	}
 }

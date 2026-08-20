@@ -144,7 +144,10 @@ final class Bei_Messenger {
 	public function notify( $text, $targets = array( 'bale', 'eitaa' ) ) {
 		$results = array();
 
-		foreach ( (array) $targets as $target ) {
+		// فقط کانال‌هایی که سوییچ فعال‌سازی‌شان در تنظیمات روشن است ارسال می‌شوند.
+		$targets = array_values( array_intersect( (array) $targets, Bei_Settings::enabled_channels() ) );
+
+		foreach ( $targets as $target ) {
 			/**
 			 * فیلتر متن پیش از ارسال — امکان شخصی‌سازی متن برای هر کانال
 			 * (مثلاً حذف Markdown برای واتساپ).

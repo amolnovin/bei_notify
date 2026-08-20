@@ -71,7 +71,12 @@ final class Bei_Email_Bridge {
 			return $args;
 		}
 
-		bei()->queue()->notify_async( $text, $options['email_bridge_targets'] );
+		$targets = array_values( array_intersect( (array) $options['email_bridge_targets'], Bei_Settings::enabled_channels() ) );
+		if ( empty( $targets ) ) {
+			return $args;
+		}
+
+		bei()->queue()->notify_async( $text, $targets );
 
 		return $args;
 	}

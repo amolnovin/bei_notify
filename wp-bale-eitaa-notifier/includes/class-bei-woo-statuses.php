@@ -245,11 +245,13 @@ final class Bei_Woo_Statuses {
 	 * @return array
 	 */
 	public function method_targets( $method ) {
+		$enabled = Bei_Settings::enabled_channels();
+
 		if ( 'all' === $method ) {
-			return array( 'bale', 'eitaa', 'telegram', 'whatsapp' );
+			return $enabled;
 		}
 
-		return array( $method );
+		return in_array( $method, $enabled, true ) ? array( $method ) : array();
 	}
 
 	/**
@@ -258,13 +260,23 @@ final class Bei_Woo_Statuses {
 	 * @return array
 	 */
 	private function method_options() {
-		return array(
+		$all = array(
 			'all'      => __( 'همه', 'bale-eitaa-notifier' ),
 			'bale'     => __( 'بله', 'bale-eitaa-notifier' ),
 			'eitaa'    => __( 'ایتا', 'bale-eitaa-notifier' ),
 			'telegram' => __( 'تلگرام', 'bale-eitaa-notifier' ),
 			'whatsapp' => __( 'واتساپ', 'bale-eitaa-notifier' ),
 		);
+
+		// فقط پیام‌رسان‌های «فعال» در لیست نمایش داده می‌شوند.
+		$filtered = array( 'all' => $all['all'] );
+		foreach ( Bei_Settings::enabled_channels() as $channel ) {
+			if ( isset( $all[ $channel ] ) ) {
+				$filtered[ $channel ] = $all[ $channel ];
+			}
+		}
+
+		return $filtered;
 	}
 
 	/**

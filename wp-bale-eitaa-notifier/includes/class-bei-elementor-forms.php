@@ -472,11 +472,13 @@ final class Bei_Elementor_Forms {
 	 * @return array
 	 */
 	public function method_targets( $method ) {
+		$enabled = Bei_Settings::enabled_channels();
+
 		if ( 'all' === $method ) {
-			return array( 'bale', 'eitaa', 'telegram', 'whatsapp' );
+			return $enabled;
 		}
 
-		return array( $method );
+		return in_array( $method, $enabled, true ) ? array( $method ) : array();
 	}
 
 	/**

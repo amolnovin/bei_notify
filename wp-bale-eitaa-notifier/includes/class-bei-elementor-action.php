@@ -165,7 +165,7 @@ class Bei_Elementor_Action extends \ElementorPro\Modules\Forms\Classes\Action_Ba
 
 		$text = bei()->elementor_forms()->build_message( $message, $record, $form_name );
 
-		$targets = ( 'all' === $method ) ? array( 'bale', 'eitaa', 'telegram', 'whatsapp' ) : array( $method );
+		$targets = ( 'all' === $method ) ? Bei_Settings::enabled_channels() : array( $method );
 
 		bei()->queue()->notify_async( $text, $targets );
 	}
