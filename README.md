@@ -23,7 +23,7 @@
 
 - فعال‌سازی از افزونه جداگانه «لایسنس منیجر آمل نوین» (لینک «لایسنس» کنار افزونه → صفحه منیجر مرکزی)
 - بروزرسانی‌ها مستقیم در «افزونه‌ها / بروزرسانی‌ها» وردپرس نمایش داده می‌شوند (سرور فروش: amolnovin.ir)
-- `product_slug` محصول: `bei-notify` — در `includes/class-bei-license.php`
+- `product_slug` محصول: `wp-bale-eitaa-notifier` (قابل تغییر با ثابت `BEI_PRODUCT_SLUG` در wp-config.php) — در `includes/class-bei-license.php`
 - سایت مالک: `define( 'BEI_LICENSE_BYPASS', true )` در wp-config.php
 
 ## 📦 نصب

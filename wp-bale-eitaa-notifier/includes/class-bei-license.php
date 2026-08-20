@@ -22,10 +22,11 @@ defined( 'ABSPATH' ) || exit;
 final class Bei_License {
 
 	/**
-	 * اسلاگ محصول در پنل فروش (wp-plugin-market-manager).
-	 * در صورت تغییر، باید در پنل فروش هم همان مقدار ثبت شود.
+	 * اسلاگ پیش‌فرض محصول در پنل فروش (wp-plugin-market-manager).
+	 * باید دقیقاً با اسلاگ محصول ثبت‌شده در سرور فروش یکسان باشد —
+	 * عدم تطابق باعث خطای «product_not_found» در فعال‌سازی می‌شود.
 	 */
-	const PRODUCT_SLUG = 'bei-notify';
+	const PRODUCT_SLUG = 'wp-bale-eitaa-notifier';
 
 	/**
 	 * آدرس‌های API سرور فروش آمل نوین.
@@ -48,6 +49,22 @@ final class Bei_License {
 	private static $updater = null;
 
 	/**
+	 * اسلاگ محصول (قابل تغییر بدون دست زدن به کد).
+	 *
+	 * در صورت تغییر اسلاگ محصول در سرور فروش، کافی است در wp-config.php:
+	 *   define( 'BEI_PRODUCT_SLUG', 'my-new-slug' );
+	 *
+	 * @return string
+	 */
+	public static function product_slug() {
+		if ( defined( 'BEI_PRODUCT_SLUG' ) && BEI_PRODUCT_SLUG ) {
+			return sanitize_key( (string) BEI_PRODUCT_SLUG );
+		}
+
+		return self::PRODUCT_SLUG;
+	}
+
+	/**
 	 * راه‌اندازی کیت لایسنس و بروزرسانی — از فایل اصلی افزونه فراخوانی می‌شود.
 	 */
 	public static function boot() {
@@ -58,10 +75,12 @@ final class Bei_License {
 			return;
 		}
 
+		$product_slug = self::product_slug();
+
 		self::$license = new WPLM_Client_Kit_License(
 			array(
 				'api_base'       => self::API_BASE,
-				'product_slug'   => self::PRODUCT_SLUG,
+				'product_slug'   => $product_slug,
 				'plugin_file'    => BEI_PLUGIN_FILE,
 				'plugin_name'    => __( 'اعلان‌رسان بله، ایتا، تلگرام و واتساپ', 'bale-eitaa-notifier' ),
 				'license_option' => 'bei_license_key',
@@ -83,7 +102,7 @@ final class Bei_License {
 				'api_url'        => self::UPDATE_API,
 				'plugin_file'    => BEI_PLUGIN_FILE,
 				'plugin_slug'    => 'wp-bale-eitaa-notifier',
-				'product_slug'   => self::PRODUCT_SLUG,
+				'product_slug'   => $product_slug,
 				'version'        => BEI_VERSION,
 				'license_option' => 'bei_license_key',
 				'name'           => __( 'اعلان‌رسان بله، ایتا، تلگرام و واتساپ', 'bale-eitaa-notifier' ),
@@ -111,7 +130,7 @@ final class Bei_License {
 		}
 
 		if ( class_exists( 'WPLM_Amolnovin_License_Manager' ) ) {
-			$url = WPLM_Amolnovin_License_Manager::page_url( array( 'product' => self::PRODUCT_SLUG ) );
+			$url = WPLM_Amolnovin_License_Manager::page_url( array( 'product' => self::product_slug() ) );
 		} else {
 			// منیجر نصب نیست — کیت اعلان نصب/فعال‌سازی را نمایش می‌دهد.
 			$url = admin_url( 'plugins.php' );
