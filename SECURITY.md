@@ -1,0 +1,33 @@
+# امنیت (Security Policy)
+
+## گزارش آسیب‌پذیری
+
+اگر آسیب‌پذیری امنیتی پیدا کردید، لطفاً آن را **عمومی** اعلام نکنید؛ از طریق
+ایمیل یا Issue خصوصی با عنوان «Security» اطلاع دهید تا ابتدا وصله منتشر شود.
+
+## توصیه‌های سخت‌سازی (مهم)
+
+1. **اعتبارنامه‌ها در wp-config.php:** به‌جای ذخیره توکن‌ها در دیتابیس، از ثابت‌های زیر استفاده کنید (اولویت خواندن با wp-config.php است):
+
+```php
+define( 'BEI_TG_TOKEN',    '123456789:AAF...' );
+define( 'BEI_TG_CHAT_ID',  '@myChannel' );
+define( 'BEI_BALE_TOKEN',  '123456789:abcd...' );
+define( 'BEI_BALE_CHAT_ID', '@myChannel' );
+define( 'BEI_EITAA_TOKEN', 'bot123456:...' );
+define( 'BEI_EITAA_CHAT_ID', 'myChannel' );
+define( 'BEI_WA_TOKEN',    '...' );
+define( 'BEI_WA_CHAT_ID',  '...' );
+define( 'BEI_TG_RELAY_KEY', '...' );
+```
+
+2. **به‌روزرسانی افزونه:** همیشه آخرین نسخه را از این مخزن نصب کنید — نسخه 3.0.0 شامل بازطراحی امنیتی توکن فعال‌سازی سفارش (تصادفی/یکبارمصرف/با انقضا)، Rate Limit ایجکس و انتقال Secret وبهوک به هدر رسمی تلگرام است.
+
+3. **رله چندسایتی:** در فایل `telegram-relay-worker.js` حتماً `ALLOWED_BOTS` (لیست سفید ربات‌ها) و `RELAY_KEY` (کلید مشترک) را تنظیم کنید تا رله شما دربان داشته باشد.
+
+4. **توکن گیتهاب / دسترسی‌ها:** توکن‌های API را در کد یا مخزن قرار ندهید؛ پس از استفاده، آن‌ها را Revoke کنید.
+
+## گزارش‌دهی
+
+- [گیت‌هاب Issues](https://github.com/amolnovin/bei_notify/issues)
+- ایمیل: imanit.ir@gmail.com

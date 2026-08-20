@@ -83,6 +83,20 @@ final class Bei_Plugin {
 	private $elementor_forms;
 
 	/**
+	 * ماژول صف ارسال (Action Scheduler + Retry).
+	 *
+	 * @var Bei_Queue
+	 */
+	private $queue;
+
+	/**
+	 * ماژول لاگ.
+	 *
+	 * @var Bei_Logger
+	 */
+	private $logger;
+
+	/**
 	 * نمونه یکتای افزونه را برمی‌گرداند.
 	 *
 	 * @return Bei_Plugin
@@ -110,6 +124,8 @@ final class Bei_Plugin {
 		$this->proxy        = new Bei_Proxy();
 		$this->woo_statuses    = new Bei_Woo_Statuses();
 		$this->elementor_forms = new Bei_Elementor_Forms();
+		$this->queue           = new Bei_Queue();
+		$this->logger          = new Bei_Logger();
 
 		// بارگذاری ترجمه در init (طبق توصیه وردپرس 6.7+ — جلوگیری از خطای
 		// «Translation loading was triggered too early»).
@@ -178,7 +194,7 @@ final class Bei_Plugin {
 			$targets = array( 'bale', 'eitaa' );
 		}
 
-		$this->messenger->notify( (string) $text, $targets );
+		$this->queue->notify_async( (string) $text, $targets );
 	}
 
 	/**
@@ -194,6 +210,8 @@ final class Bei_Plugin {
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-proxy.php';
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-woo-statuses.php';
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-elementor-forms.php';
+		require_once BEI_PLUGIN_DIR . 'includes/class-bei-queue.php';
+		require_once BEI_PLUGIN_DIR . 'includes/class-bei-logger.php';
 	}
 
 	/**
@@ -282,5 +300,23 @@ final class Bei_Plugin {
 	 */
 	public function elementor_forms() {
 		return $this->elementor_forms;
+	}
+
+	/**
+	 * دسترسی به ماژول صف ارسال.
+	 *
+	 * @return Bei_Queue
+	 */
+	public function queue() {
+		return $this->queue;
+	}
+
+	/**
+	 * دسترسی به ماژول لاگ.
+	 *
+	 * @return Bei_Logger
+	 */
+	public function logger() {
+		return $this->logger;
 	}
 }

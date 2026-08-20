@@ -71,7 +71,7 @@ final class Bei_Email_Bridge {
 			return $args;
 		}
 
-		bei()->messenger()->notify( $text, $options['email_bridge_targets'] );
+		bei()->queue()->notify_async( $text, $options['email_bridge_targets'] );
 
 		return $args;
 	}

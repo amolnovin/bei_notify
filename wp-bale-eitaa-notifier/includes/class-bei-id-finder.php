@@ -184,9 +184,23 @@ final class Bei_Id_Finder {
 	 */
 	public function webhook_permission( $request ) {
 		$secret = get_option( self::SECRET_OPTION, '' );
-		$given  = (string) $request->get_param( 'secret' );
+		if ( empty( $secret ) ) {
+			return false;
+		}
 
-		return ! empty( $secret ) && hash_equals( $secret, $given );
+		// SEC-03: اولویت با هدر رسمی تلگرام (X-Telegram-Bot-Api-Secret-Token)
+		// تا Secret در Access Log/CDN ثبت نشود.
+		if ( method_exists( $request, 'get_header' ) ) {
+			$header = (string) $request->get_header( 'x-telegram-bot-api-secret-token' );
+			if ( '' !== $header && hash_equals( $secret, $header ) ) {
+				return true;
+			}
+		}
+
+		// پشتیبان: کوئری‌استرینگ (بله و وبهوک‌های ثبت‌شده قبلی).
+		$given = (string) $request->get_param( 'secret' );
+
+		return hash_equals( $secret, $given );
 	}
 
 	/**
@@ -497,7 +511,19 @@ final class Bei_Id_Finder {
 
 		if ( 'on' === $do ) {
 			$webhook_url = $this->webhook_url( $target );
-			$url         = add_query_arg( 'url', $webhook_url, $this->endpoint( $target, 'setWebhook' ) );
+
+			if ( 'telegram' === $target ) {
+				// SEC-03: ثبت secret_token رسمی تلگرام — تحویل با هدر انجام می‌شود.
+				$url = add_query_arg(
+					array(
+						'url'          => $webhook_url,
+						'secret_token' => $this->ensure_secret(),
+					),
+					$this->endpoint( $target, 'setWebhook' )
+				);
+			} else {
+				$url = add_query_arg( 'url', $webhook_url, $this->endpoint( $target, 'setWebhook' ) );
+			}
 
 			// ثبت وبهوک — از مسیر «آدرس API (سفارشی/رله)» انجام می‌شود (telegram_base).
 			$response = wp_remote_get( $url, array( 'timeout' => 30 ) );

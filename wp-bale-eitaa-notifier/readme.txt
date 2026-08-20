@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 2.10.7
+Stable tag: 3.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,16 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.0.0 =
+* (SEC-01) توکن فعال‌سازی اعلان سفارش بازطراحی شد: تصادفی ۳۲ کاراکتری، ذخیره در متای سفارش، انقضای ۷ روزه و یکبارمصرف
+* (ARCH-01) صف ارسال ناهمزمان: Action Scheduler (پس‌زمینه واقعی) ← WP-Cron تک‌زمانه ← ارسال مستقیم (هیچ پیامی گم نمی‌شود) + سوییچ در پنل
+* (ARCH-02) Retry واقعی: تا ۳ تلاش با Exponential Backoff (۱۰ و ۶۰ ثانیه)
+* (SEC-02) Rate Limit ایجکس «دریافت شناسه»: حداکثر ۱۰ درخواست در دقیقه
+* (SEC-03) ارسال Secret وبهوک تلگرام در هدر رسمی X-Telegram-Bot-Api-Secret-Token (secret_token در setWebhook) — کوئری به‌عنوان پشتیبان باقی است
+* (DEV-01) ماژول Logger + کارت «گزارش ارسال پیام‌ها» در پنل (۲۰ ارسال آخر با وضعیت/تلاش/خطا + پاک‌سازی)
+* (SEC) اولویت خواندن اعتبارنامه‌ها از ثابت‌های wp-config.php (BEI_TG_TOKEN و...) به‌جای Plain Text در دیتابیس
+* مسیردهی همه هوک‌های تولید (فرم‌ها، ووکامرس، پل ایمیل، المنتور، bei_send) به صف
 
 = 2.10.7 =
 * پشتیبانی رسمی چندسایتی در رله تلگرام: فایل telegram-relay-worker.js حالا دو دربان اختیاری دارد — لیست سفید ربات‌ها (ALLOWED_BOTS) و کلید مشترک (RELAY_KEY)

@@ -24,6 +24,7 @@ final class Bei_Settings {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_post_bei_test', array( $this, 'handle_test' ) );
+		add_action( 'admin_post_bei_clear_log', array( $this, 'handle_clear_log' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
@@ -83,6 +84,9 @@ final class Bei_Settings {
 
 			// رویدادهای وردپرس.
 			'notify_publish' => 0,
+
+			// صف ارسال (Action Scheduler / WP-Cron + Retry).
+			'queue_enabled' => 1,
 		);
 	}
 
@@ -93,8 +97,31 @@ final class Bei_Settings {
 	 */
 	public static function get_options() {
 		$options = get_option( self::OPTION_KEY, array() );
+		$options = wp_parse_args( $options, self::defaults() );
 
-		return wp_parse_args( $options, self::defaults() );
+		// امنیت (SEC): اولویت خواندن اعتبارنامه‌ها از ثابت‌های wp-config.php
+		// تا توکن‌ها به‌صورت Plain Text فقط در دیتابیس نباشند.
+		$constants = array(
+			'bale_token'    => 'BEI_BALE_TOKEN',
+			'bale_chat_id'  => 'BEI_BALE_CHAT_ID',
+			'eitaa_token'   => 'BEI_EITAA_TOKEN',
+			'eitaa_chat_id' => 'BEI_EITAA_CHAT_ID',
+			'tg_token'      => 'BEI_TG_TOKEN',
+			'tg_chat_id'    => 'BEI_TG_CHAT_ID',
+			'tg_api_base'   => 'BEI_TG_API_BASE',
+			'tg_relay_key'  => 'BEI_TG_RELAY_KEY',
+			'wa_instance'   => 'BEI_WA_INSTANCE',
+			'wa_token'      => 'BEI_WA_TOKEN',
+			'wa_chat_id'    => 'BEI_WA_CHAT_ID',
+		);
+
+		foreach ( $constants as $key => $constant ) {
+			if ( defined( $constant ) ) {
+				$options[ $key ] = constant( $constant );
+			}
+		}
+
+		return $options;
 	}
 
 	/**
@@ -220,6 +247,8 @@ final class Bei_Settings {
 		}
 
 		$clean['notify_publish'] = empty( $input['notify_publish'] ) ? 0 : 1;
+
+		$clean['queue_enabled'] = empty( $input['queue_enabled'] ) ? 0 : 1;
 
 		return $clean;
 	}
@@ -663,6 +692,23 @@ final class Bei_Settings {
 							</div>
 						</section>
 
+						<!-- صندوق ارسال (Queue) -->
+						<section class="bei-card">
+							<div class="bei-card-head">
+								<span class="bei-icon bei-icon--queue">🗂️</span>
+								<div>
+									<h2><?php esc_html_e( 'صندوق ارسال (Queue)', 'bale-eitaa-notifier' ); ?></h2>
+									<p class="bei-hint"><?php esc_html_e( 'ارسال پیام‌ها خارج از Request اصلی سایت انجام می‌شود — فرم‌ها و سفارش‌ها کند نمی‌شوند و پیام‌های ناموفق تا ۳ بار با تأخیر تصاعدی دوباره تلاش می‌شوند.', 'bale-eitaa-notifier' ); ?></p>
+								</div>
+							</div>
+							<div class="bei-card-body">
+								<div class="bei-field">
+									<?php $this->render_switch( 'bei_options[queue_enabled]', '1', ! empty( $options['queue_enabled'] ), __( 'ارسال ناهمزمان از طریق صف', 'bale-eitaa-notifier' ) ); ?>
+									<p class="bei-hint"><?php esc_html_e( 'با Action Scheduler (ووکامرس) در پس‌زمینه واقعی اجرا می‌شود؛ بدون آن از WP-Cron تک‌زمانه استفاده می‌کند؛ در نبود هر دو، پیام مستقیم ارسال می‌شود (هیچ پیامی گم نمی‌شود). دکمه‌های «تست اتصال» همیشه مستقیم هستند تا نتیجه را همان لحظه ببینید.', 'bale-eitaa-notifier' ); ?></p>
+								</div>
+							</div>
+						</section>
+
 						<!-- اتصال به افزونه‌ها -->
 						<section class="bei-card">
 							<div class="bei-card-head">
@@ -720,6 +766,9 @@ final class Bei_Settings {
 					<?php
 					// بخش شناسه‌یاب (خارج از فرم اصلی — فرم‌های مستقلی دارد).
 					bei()->id_finder()->render_section();
+
+					// کارت گزارش ارسال (لاگ).
+					$this->render_log_card();
 					?>
 				</div>
 
@@ -855,8 +904,10 @@ final class Bei_Settings {
 		}
 
 		if ( ! empty( $errors ) ) {
+			bei()->logger()->log( 'system', 'test', 'failed', $target, array( 'error' => implode( ' | ', $errors ) ) );
 			set_transient( 'bei_test_result', array( 'error', implode( ' | ', $errors ) ), 60 );
 		} else {
+			bei()->logger()->log( 'system', 'test', 'sent', $target );
 			set_transient( 'bei_test_result', array( 'ok', wp_json_encode( $result, JSON_UNESCAPED_UNICODE ) ), 60 );
 		}
 
@@ -926,5 +977,77 @@ final class Bei_Settings {
 				$hosts[ $target ]
 			),
 		);
+	}
+
+	/**
+	 * پاک‌سازی لاگ ارسال‌ها.
+	 */
+	public function handle_clear_log() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'دسترسی غیرمجاز.', 'bale-eitaa-notifier' ) );
+		}
+		check_admin_referer( self::NONCE_ACTION, 'bei_test_nonce' );
+
+		Bei_Logger::clear();
+
+		wp_safe_redirect(
+			add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'admin.php' ) )
+		);
+		exit;
+	}
+
+	/**
+	 * نمایش کارت «گزارش ارسال» (لاگ ۲۰ ارسال آخر).
+	 */
+	public function render_log_card() {
+		$entries = Bei_Logger::entries();
+		?>
+		<section class="bei-card">
+			<div class="bei-card-head">
+				<span class="bei-icon bei-icon--docs">📊</span>
+				<div>
+					<h2><?php esc_html_e( 'گزارش ارسال پیام‌ها', 'bale-eitaa-notifier' ); ?></h2>
+					<p class="bei-hint"><?php esc_html_e( '۲۰ ارسال آخر + تلاش‌های Retry — اطلاعات حساس (توکن/رمز) هرگز ثبت نمی‌شود.', 'bale-eitaa-notifier' ); ?></p>
+				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-inline-start:auto">
+					<input type="hidden" name="action" value="bei_clear_log" />
+					<?php wp_nonce_field( self::NONCE_ACTION, 'bei_test_nonce' ); ?>
+					<button class="button bei-btn" type="submit">🧹 <?php esc_html_e( 'پاک‌سازی لاگ', 'bale-eitaa-notifier' ); ?></button>
+				</form>
+			</div>
+			<div class="bei-card-body">
+				<?php if ( empty( $entries ) ) : ?>
+					<p class="bei-hint"><?php esc_html_e( 'هنوز هیچ ارسالی ثبت نشده است.', 'bale-eitaa-notifier' ); ?></p>
+				<?php else : ?>
+					<div class="bei-wc-table">
+						<div class="bei-wc-row bei-wc-row--head">
+							<span><?php esc_html_e( 'زمان', 'bale-eitaa-notifier' ); ?></span>
+							<span><?php esc_html_e( 'کانال', 'bale-eitaa-notifier' ); ?></span>
+							<span><?php esc_html_e( 'وضعیت', 'bale-eitaa-notifier' ); ?></span>
+							<span><?php esc_html_e( 'جزئیات', 'bale-eitaa-notifier' ); ?></span>
+						</div>
+						<?php foreach ( array_slice( $entries, 0, 20 ) as $entry ) : ?>
+							<?php
+							$status_label = 'sent' === $entry['status'] ? '✅ ' . __( 'موفق', 'bale-eitaa-notifier' ) : ( 'scheduled' === $entry['status'] ? '⏳ ' . __( 'زمان‌بندی', 'bale-eitaa-notifier' ) : '❌ ' . __( 'ناموفق', 'bale-eitaa-notifier' ) );
+							$detail       = $entry['message'];
+							if ( ! empty( $entry['context']['attempt'] ) ) {
+								$detail .= ' — ' . sprintf( /* translators: %s: شماره تلاش */ __( 'تلاش %s', 'bale-eitaa-notifier' ), $entry['context']['attempt'] );
+							}
+							if ( ! empty( $entry['context']['error'] ) ) {
+								$detail .= ' — ' . $entry['context']['error'];
+							}
+							?>
+							<div class="bei-wc-row">
+								<span class="bei-hint" dir="ltr"><?php echo esc_html( $entry['time'] ); ?></span>
+								<span class="bei-wc-label"><?php echo esc_html( $entry['channel'] ); ?></span>
+								<span><?php echo esc_html( $status_label ); ?></span>
+								<span class="bei-hint"><?php echo esc_html( $detail ); ?></span>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+			</div>
+		</section>
+		<?php
 	}
 }

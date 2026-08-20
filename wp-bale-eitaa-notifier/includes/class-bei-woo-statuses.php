@@ -526,7 +526,7 @@ final class Bei_Woo_Statuses {
 		if ( ! empty( $row['admin']['enabled'] ) ) {
 			$targets = $this->method_targets( $row['admin']['method'] );
 			$text    = $this->build_message( $row['admin']['message'], $order, $key, $status );
-			bei()->messenger()->notify( $text, $targets );
+			bei()->queue()->notify_async( $text, $targets );
 		}
 
 		if ( ! empty( $row['customer']['enabled'] ) ) {
@@ -681,13 +681,24 @@ final class Bei_Woo_Statuses {
 	}
 
 	/**
-	 * توکن امنیتی سفارش.
+	 * توکن امنیتی سفارش (SEC-01 — تصادفی، یکبارمصرف، با انقضا).
 	 *
-	 * @param int $order_id شناسه سفارش.
+	 * در متای سفارش ذخیره می‌شود و در اولین استفاده باطل می‌شود.
+	 *
+	 * @param object $order سفارش ووکامرس.
 	 * @return string
 	 */
-	public function order_token( $order_id ) {
-		return substr( md5( $order_id . wp_salt( 'auth' ) ), 0, 12 );
+	public function ensure_subscribe_token( $order ) {
+		$token = $order->get_meta( '_bei_sub_token' );
+
+		if ( empty( $token ) ) {
+			$token = wp_generate_password( 32, false, false );
+			$order->update_meta_data( '_bei_sub_token', $token );
+			$order->update_meta_data( '_bei_sub_expires', time() + ( 7 * DAY_IN_SECONDS ) );
+			$order->save();
+		}
+
+		return $token;
 	}
 
 	/**
@@ -704,8 +715,16 @@ final class Bei_Woo_Statuses {
 			return '';
 		}
 
+		if ( ! function_exists( 'wc_get_order' ) ) {
+			return '';
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return '';
+		}
+
 		$options = Bei_Settings::get_options();
-		$token   = $this->order_token( $order_id );
+		$token   = $this->ensure_subscribe_token( $order );
 
 		$links = array();
 
@@ -797,16 +816,12 @@ final class Bei_Woo_Statuses {
 			return $this->handle_user_token( $chat_id, 'bei_u_' . $m[1], $channel );
 		}
 
-		if ( ! preg_match( '/bei_sub_(\d+)_([a-f0-9]{12})/i', (string) $text, $m ) ) {
+		if ( ! preg_match( '/bei_sub_(\d+)_([A-Za-z0-9]{32})/', (string) $text, $m ) ) {
 			return null;
 		}
 
 		$order_id = (int) $m[1];
 		$token    = $m[2];
-
-		if ( ! hash_equals( $this->order_token( $order_id ), $token ) ) {
-			return __( '❌ لینک فعال‌سازی نامعتبر است.', 'bale-eitaa-notifier' );
-		}
 
 		if ( ! function_exists( 'wc_get_order' ) ) {
 			return __( '❌ فروشگاه در دسترس نیست.', 'bale-eitaa-notifier' );
@@ -817,6 +832,27 @@ final class Bei_Woo_Statuses {
 			return __( '❌ سفارش پیدا نشد.', 'bale-eitaa-notifier' );
 		}
 
+		$stored = $order->get_meta( '_bei_sub_token' );
+
+		// یکبارمصرف: پس از استفاده موفق، توکن باطل می‌شود.
+		if ( empty( $stored ) ) {
+			return __( '❌ این لینک فعال‌سازی قبلاً استفاده شده است.', 'bale-eitaa-notifier' );
+		}
+
+		if ( ! hash_equals( $stored, $token ) ) {
+			return __( '❌ لینک فعال‌سازی نامعتبر است.', 'bale-eitaa-notifier' );
+		}
+
+		$expires = (int) $order->get_meta( '_bei_sub_expires' );
+		if ( $expires && time() > $expires ) {
+			$order->delete_meta_data( '_bei_sub_token' );
+
+			return __( '❌ لینک فعال‌سازی منقضی شده — از صفحه تشکر سفارش، لینک جدید بگیرید.', 'bale-eitaa-notifier' );
+		}
+
+		// مصرف توکن (یکبارمصرف).
+		$order->delete_meta_data( '_bei_sub_token' );
+		$order->delete_meta_data( '_bei_sub_expires' );
 		$order->update_meta_data( '_bei_chat_' . $channel, $chat_id );
 		$order->save();
 
@@ -1019,13 +1055,23 @@ final class Bei_Woo_Statuses {
 	}
 
 	/**
-	 * بررسی nonce ایجکس.
+	 * بررسی nonce + Rate Limit ایجکس (SEC-02 — حداکثر ۱۰ درخواست در دقیقه).
 	 */
 	private function check_ajax_nonce() {
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'bei_checkout_subscribe' ) ) {
 			wp_send_json_error( array( 'message' => __( 'خطای امنیتی — صفحه را تازه کنید.', 'bale-eitaa-notifier' ) ), 403 );
 		}
+
+		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		$key = 'bei_rl_' . md5( $ip );
+
+		$count = (int) get_transient( $key );
+		if ( $count >= 10 ) {
+			wp_send_json_error( array( 'message' => __( 'تعداد درخواست‌ها زیاد است — کمی صبر کنید و دوباره امتحان کنید.', 'bale-eitaa-notifier' ) ), 429 );
+		}
+
+		set_transient( $key, $count + 1, 60 );
 	}
 
 	/* ------------------------------------------------------------------ */

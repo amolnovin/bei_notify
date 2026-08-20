@@ -59,7 +59,7 @@ final class Bei_Integrations {
 
 		$title = method_exists( $contact_form, 'title' ) ? $contact_form->title() : __( 'فرم تماس', 'bale-eitaa-notifier' );
 
-		bei()->messenger()->notify(
+		bei()->queue()->notify_async(
 			sprintf( /* translators: 1: نام فرم، 2: فیلدها */ __( "📩 فرم «%1\$s» ارسال شد:\n\n%2\$s", 'bale-eitaa-notifier' ), $title, implode( "\n", $rows ) )
 		);
 	}
@@ -91,7 +91,7 @@ final class Bei_Integrations {
 
 		$title = isset( $form_data['settings']['form_title'] ) ? $form_data['settings']['form_title'] : __( 'فرم وردپرسی', 'bale-eitaa-notifier' );
 
-		bei()->messenger()->notify(
+		bei()->queue()->notify_async(
 			sprintf( /* translators: 1: نام فرم، 2: فیلدها */ __( "📝 فرم «%1\$s» ثبت شد:\n\n%2\$s", 'bale-eitaa-notifier' ), $title, implode( "\n", $rows ) )
 		);
 	}
@@ -121,7 +121,7 @@ final class Bei_Integrations {
 
 		$title = isset( $form['title'] ) ? $form['title'] : __( 'فرم گراویتی', 'bale-eitaa-notifier' );
 
-		bei()->messenger()->notify(
+		bei()->queue()->notify_async(
 			sprintf( /* translators: 1: نام فرم، 2: فیلدها */ __( "📝 فرم «%1\$s» ثبت شد:\n\n%2\$s", 'bale-eitaa-notifier' ), $title, implode( "\n", $rows ) )
 		);
 	}
@@ -151,7 +151,7 @@ final class Bei_Integrations {
 
 		$title = isset( $form_data['settings']['title'] ) ? $form_data['settings']['title'] : __( 'فرم نینجا', 'bale-eitaa-notifier' );
 
-		bei()->messenger()->notify(
+		bei()->queue()->notify_async(
 			sprintf( /* translators: 1: نام فرم، 2: فیلدها */ __( "📝 فرم «%1\$s» ثبت شد:\n\n%2\$s", 'bale-eitaa-notifier' ), $title, implode( "\n", $rows ) )
 		);
 	}
@@ -181,7 +181,7 @@ final class Bei_Integrations {
 
 		$title = isset( $form->title ) ? $form->title : __( 'فرم فلوئنت', 'bale-eitaa-notifier' );
 
-		bei()->messenger()->notify(
+		bei()->queue()->notify_async(
 			sprintf( /* translators: 1: نام فرم، 2: فیلدها */ __( "📝 فرم «%1\$s» ثبت شد:\n\n%2\$s", 'bale-eitaa-notifier' ), $title, implode( "\n", $rows ) )
 		);
 	}
@@ -212,7 +212,7 @@ final class Bei_Integrations {
 		$title = get_the_title( $post );
 		$url   = get_permalink( $post );
 
-		bei()->messenger()->notify(
+		bei()->queue()->notify_async(
 			sprintf(
 				/* translators: 1: عنوان نوشته، 2: آدرس */
 				__( "📢 مطلب جدید در سایت منتشر شد:\n\n**%1\$s**\n\n[مشاهده مطلب](%2\$s)", 'bale-eitaa-notifier' ),

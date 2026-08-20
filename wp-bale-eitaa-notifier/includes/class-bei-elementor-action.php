@@ -167,6 +167,6 @@ class Bei_Elementor_Action extends \ElementorPro\Modules\Forms\Classes\Action_Ba
 
 		$targets = ( 'all' === $method ) ? array( 'bale', 'eitaa', 'telegram', 'whatsapp' ) : array( $method );
 
-		bei()->messenger()->notify( $text, $targets );
+		bei()->queue()->notify_async( $text, $targets );
 	}
 }

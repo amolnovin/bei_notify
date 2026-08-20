@@ -462,7 +462,7 @@ final class Bei_Elementor_Forms {
 		$text    = $this->build_message( $message, $record, $form_name );
 
 		$targets = $this->method_targets( $row['method'] );
-		bei()->messenger()->notify( $text, $targets );
+		bei()->queue()->notify_async( $text, $targets );
 	}
 
 	/**
