@@ -3,7 +3,7 @@
  * Plugin Name:       اعلان‌رسان بله و ایتا
  * Plugin URI:        https://example.com/bale-eitaa-notifier
  * Description:       ارسال خودکار پیام به تلگرام، بله، ایتا و واتساپ (با مسیرهای رایگان CallMeBot و شماره تست متا)؛ با پل ایمیل سراسری، اتصال آماده به فرم‌ها و ووکامرس، API خارجی، پشتیبانی پراکسی/رله برای دور زدن فیلترینگ و سیستم لایسنس و بروزرسانی خودکار. بر اساس مستندات رسمی core.telegram.org ، docs.bale.ai ، eitaayar.ir/api و callmebot.com
- * Version:           3.1.2
+ * Version:           3.1.3
  * Requires at least: 5.0
  * Requires PHP:      7.2
  * Author:            شما
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BEI_VERSION', '3.1.2' );
+define( 'BEI_VERSION', '3.1.3' );
 define( 'BEI_PLUGIN_FILE', __FILE__ );
 define( 'BEI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -25,7 +25,7 @@ define( 'BEI_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 /*
  * لایسنس و بروزرسانی خودکار (WPLM Client Kit آمل نوین).
- * صفحه فعال‌سازی: اعلان‌رسان پیام‌رسان‌ها ← لایسنس افزونه
+ * صفحه فعال‌سازی: «لایسنس منیجر آمل نوین» (افزونه جداگانه)
  */
 require_once BEI_PLUGIN_DIR . 'includes/class-bei-license.php';
 Bei_License::boot();
@@ -33,9 +33,14 @@ Bei_License::boot();
 /*
  * قفل لایسنس: امکانات اصلی افزونه فقط با لایسنس فعال بارگذاری می‌شود.
  * (در سایت مالک می‌توان با define( 'BEI_LICENSE_BYPASS', true ) قفل را برداشت.)
+ *
+ * نکته مهم: علاوه بر require، «نمونه‌سازی» هم لازم است — همه هوک‌های افزونه
+ * (منوی admin_menu، REST، پل ایمیل و...) در سازنده کلاس‌ها ثبت می‌شوند و
+ * بدون نمونه‌سازی، حتی با لایسنس فعال هم منو و امکانات ظاهر نمی‌شوند.
  */
 if ( Bei_License::is_active() ) {
 	require_once BEI_PLUGIN_DIR . 'includes/class-bei-plugin.php';
+	Bei_Plugin::instance();
 }
 
 /**

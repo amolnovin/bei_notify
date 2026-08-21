@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.2
+Stable tag: 3.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.3 =
+* رفع بحرانی: بعد از فعال‌سازی لایسنس، منوی افزونه (bei-settings) و همه امکانات نمایش داده نمی‌شد — نمونه‌سازی هسته (Bei_Plugin::instance) پس از تأیید لایسنس اضافه شد تا هوک‌های admin_menu/REST/پل ایمیل ثبت شوند
 
 = 3.1.2 =
 * رفع خطای «product_not_found» در فعال‌سازی لایسنس: اسلاگ پیش‌فرض محصول به wp-bale-eitaa-notifier تغییر کرد (مطابق محصول ثبت‌شده در سرور فروش)
