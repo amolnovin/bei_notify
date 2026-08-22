@@ -47,6 +47,23 @@
 	cursor: wait;
 }
 
+.bei-prompt-close {
+	margin-inline-start: auto;
+	padding: 4px 10px;
+	border: 0;
+	border-radius: 999px;
+	background: #eef2f7;
+	color: #64748b;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bei-prompt-close:hover {
+	background: #fecaca;
+	color: #b91c1c;
+}
+
 .bei-checkout-status {
 	width: 100%;
 	margin-top: 2px;

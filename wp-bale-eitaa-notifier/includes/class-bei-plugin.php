@@ -104,6 +104,13 @@ final class Bei_Plugin {
 	private $api_consumers;
 
 	/**
+	 * ماژول فعال‌سازی خودکار اعلان کاربر (بعد از ورود).
+	 *
+	 * @var Bei_User_Subscribe
+	 */
+	private $user_subscribe;
+
+	/**
 	 * نمونه یکتای افزونه را برمی‌گرداند.
 	 *
 	 * @return Bei_Plugin
@@ -134,6 +141,7 @@ final class Bei_Plugin {
 		$this->queue           = new Bei_Queue();
 		$this->logger          = new Bei_Logger();
 		$this->api_consumers   = new Bei_Api_Consumers();
+		$this->user_subscribe  = new Bei_User_Subscribe();
 
 		// بارگذاری ترجمه در init (طبق توصیه وردپرس 6.7+ — جلوگیری از خطای
 		// «Translation loading was triggered too early»).
@@ -221,6 +229,7 @@ final class Bei_Plugin {
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-queue.php';
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-logger.php';
 		require_once BEI_PLUGIN_DIR . 'includes/class-bei-api-consumers.php';
+		require_once BEI_PLUGIN_DIR . 'includes/class-bei-user-subscribe.php';
 	}
 
 	/**
@@ -336,5 +345,14 @@ final class Bei_Plugin {
 	 */
 	public function api_consumers() {
 		return $this->api_consumers;
+	}
+
+	/**
+	 * دسترسی به ماژول فعال‌سازی خودکار اعلان کاربر.
+	 *
+	 * @return Bei_User_Subscribe
+	 */
+	public function user_subscribe() {
+		return $this->user_subscribe;
 	}
 }

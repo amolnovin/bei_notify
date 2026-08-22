@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.3
+Stable tag: 3.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.4 =
+* فعال‌سازی خودکار اعلان کاربر بعد از ورود: بررسی خودکار خالی بودن شناسه تلگرام/بله در متای کاربر و نمایش اعلان شناور یک‌کلیکی تا کاربر فقط Start بزند — شناسه خودکار از وبهوک/getUpdates دریافت و در متای کاربر ذخیره می‌شود (ربات نمی‌تواند پیام اول را خودش بفرستد؛ این حداکثر خودکارسازی ممکن است)
+* دکمه رد (✕) اعلان با ذخیره در متای کاربر — تکرار نمی‌شود
 
 = 3.1.3 =
 * رفع بحرانی: بعد از فعال‌سازی لایسنس، منوی افزونه (bei-settings) و همه امکانات نمایش داده نمی‌شد — نمونه‌سازی هسته (Bei_Plugin::instance) پس از تأیید لایسنس اضافه شد تا هوک‌های admin_menu/REST/پل ایمیل ثبت شوند

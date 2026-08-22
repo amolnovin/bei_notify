@@ -740,7 +740,7 @@ final class Bei_Woo_Statuses {
 
 		$links = array();
 
-		if ( ! empty( $options['tg_bot_username'] ) && $this->channel_enabled_for_customer( 'telegram' ) ) {
+		if ( ! empty( $options['tg_bot_username'] ) && $this->customer_enabled_for_channel( 'telegram' ) ) {
 			$links[] = sprintf(
 				'<a class="bei-sub-btn" href="https://t.me/%1$s?start=bei_sub_%2$d_%3$s" target="_blank" rel="noopener">🟦 %4$s</a>',
 				esc_attr( $options['tg_bot_username'] ),
@@ -750,7 +750,7 @@ final class Bei_Woo_Statuses {
 			);
 		}
 
-		if ( ! empty( $options['bale_bot_username'] ) && $this->channel_enabled_for_customer( 'bale' ) ) {
+		if ( ! empty( $options['bale_bot_username'] ) && $this->customer_enabled_for_channel( 'bale' ) ) {
 			$links[] = sprintf(
 				'<a class="bei-sub-btn" href="https://ble.ir/%1$s?start=bei_sub_%2$d_%3$s" target="_blank" rel="noopener">🟢 %4$s</a>',
 				esc_attr( $options['bale_bot_username'] ),
@@ -772,11 +772,12 @@ final class Bei_Woo_Statuses {
 
 	/**
 	 * آیا کانالی در تب «پیام‌های مشتریان» حداقل یک وضعیت فعال دارد؟
+	 * (عمومی — ماژول فعال‌سازی خودکار اعلان کاربر هم استفاده می‌کند)
 	 *
 	 * @param string $channel کانال.
 	 * @return bool
 	 */
-	private function channel_enabled_for_customer( $channel ) {
+	public function customer_enabled_for_channel( $channel ) {
 		$options = self::get_options();
 		if ( empty( $options['enabled'] ) ) {
 			return false;
@@ -1101,7 +1102,7 @@ final class Bei_Woo_Statuses {
 		$has_bot = ! empty( $options['tg_bot_username'] ) || ! empty( $options['bale_bot_username'] );
 
 		return $has_bot
-			&& ( $this->channel_enabled_for_customer( 'telegram' ) || $this->channel_enabled_for_customer( 'bale' ) );
+			&& ( $this->customer_enabled_for_channel( 'telegram' ) || $this->customer_enabled_for_channel( 'bale' ) );
 	}
 
 	/**
@@ -1152,13 +1153,13 @@ final class Bei_Woo_Statuses {
 		$options = Bei_Settings::get_options();
 
 		$buttons = array();
-		if ( ! empty( $options['tg_bot_username'] ) && $this->channel_enabled_for_customer( 'telegram' ) ) {
+		if ( ! empty( $options['tg_bot_username'] ) && $this->customer_enabled_for_channel( 'telegram' ) ) {
 			$buttons[] = array(
 				'channel' => 'telegram',
 				'label'   => __( '🟦 فعال‌سازی اعلان تلگرام', 'bale-eitaa-notifier' ),
 			);
 		}
-		if ( ! empty( $options['bale_bot_username'] ) && $this->channel_enabled_for_customer( 'bale' ) ) {
+		if ( ! empty( $options['bale_bot_username'] ) && $this->customer_enabled_for_channel( 'bale' ) ) {
 			$buttons[] = array(
 				'channel' => 'bale',
 				'label'   => __( '🟢 فعال‌سازی اعلان بله', 'bale-eitaa-notifier' ),

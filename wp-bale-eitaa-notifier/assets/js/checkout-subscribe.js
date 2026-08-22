@@ -64,6 +64,33 @@
 		}, 3000 );
 	}
 
+	/**
+	 * دکمه رد اعلان (✕) — دیگر نمایش داده نمی‌شود.
+	 */
+	document.addEventListener( 'click', function ( event ) {
+		var close = event.target.closest( '[data-bei-dismiss="1"]' );
+		if ( ! close ) {
+			return;
+		}
+
+		var bar = close.closest( '.bei-checkout-bar' );
+		if ( bar ) {
+			bar.style.display = 'none';
+		}
+
+		if ( cfg.promptNonce ) {
+			var body = new URLSearchParams();
+			body.set( 'action', 'bei_dismiss_prompt' );
+			body.set( 'nonce', cfg.promptNonce );
+			fetch( cfg.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: body.toString()
+			} ).catch( function () {} );
+		}
+	} );
+
 	document.addEventListener( 'click', function ( event ) {
 		var btn = event.target.closest( '.bei-checkout-btn' );
 		if ( ! btn || btn.dataset.busy === '1' ) {
