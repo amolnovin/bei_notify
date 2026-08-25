@@ -1101,17 +1101,42 @@ final class Bei_Messenger {
 
 		if ( $code < 200 || $code >= 300 ) {
 			$desc = isset( $data['description'] ) ? $data['description'] : sprintf( /* translators: %s: کد HTTP */ __( 'کد HTTP: %s', 'bale-eitaa-notifier' ), $code );
+			$desc = $this->friendly_error( $desc );
 
 			return new WP_Error( 'bei_http', sprintf( /* translators: 1: پیام‌رسان، 2: توضیح خطا */ __( 'خطای HTTP در %1$s: %2$s', 'bale-eitaa-notifier' ), $source, $desc ) );
 		}
 
 		if ( empty( $data['ok'] ) ) {
 			$desc = isset( $data['description'] ) ? $data['description'] : ( isset( $data['error'] ) ? $data['error'] : __( 'نامشخص', 'bale-eitaa-notifier' ) );
+			$desc = $this->friendly_error( $desc );
 
 			return new WP_Error( 'bei_api', sprintf( /* translators: 1: پیام‌رسان، 2: توضیح خطا */ __( 'خطای API در %1$s: %2$s', 'bale-eitaa-notifier' ), $source, $desc ) );
 		}
 
 		return $data;
+	}
+
+	/**
+	 * افزودن راهنمای فارسی به خطاهای شناخته‌شده تلگرام/بله.
+	 *
+	 * @param string $desc توضیح خام خطا.
+	 * @return string
+	 */
+	private function friendly_error( $desc ) {
+		$map = array(
+			'bot was blocked by the user' => __( 'کاربر مقصد ربات را مسدود کرده است — در پیام‌رسان وارد گفتگوی ربات شوید و «رفع مسدودیت» را بزنید، یا برای اطلاع‌رسانی سایت به‌جای چت شخصی از کانال استفاده کنید (ربات را ادمین کانال کنید).', 'bale-eitaa-notifier' ),
+			'chat not found'              => __( 'گفتگو پیدا نشد — ربات باید عضو گفتگو باشد (در کانال/گروه حتماً ادمین باشد) و chat_id درست باشد.', 'bale-eitaa-notifier' ),
+			'not enough rights'           => __( 'ربات دسترسی کافی ندارد — ربات را «ادمین» گفتگو کنید.', 'bale-eitaa-notifier' ),
+			'unauthorized'                => __( 'توکن ربات نامعتبر است — توکن را دوباره از BotFather بگیرید.', 'bale-eitaa-notifier' ),
+		);
+
+		foreach ( $map as $needle => $hint ) {
+			if ( false !== stripos( (string) $desc, $needle ) ) {
+				return $desc . ' — 💡 ' . $hint;
+			}
+		}
+
+		return $desc;
 	}
 
 	/**
