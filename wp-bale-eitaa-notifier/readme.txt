@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.5
+Stable tag: 3.1.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.6 =
+* بستهٔ «نسخهٔ آزاد» (ZIP بدون کیت لایسنس): افزونه بدون نیاز به لایسنس و بدون بروزرسانی خودکار اجرا می‌شود؛ boot بدون کیت خطای fatal نمی‌دهد و لینک «لایسنس» در نسخهٔ آزاد نمایش داده نمی‌شود
 
 = 3.1.5 =
 * راهنمای فارسی خطاهای شناخته‌شده تلگرام/بله در پیام خطا: «bot was blocked by the user» (رفع مسدودیت/استفاده از کانال)، «chat not found»، «not enough rights» و «unauthorized»

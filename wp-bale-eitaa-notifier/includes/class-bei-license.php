@@ -66,10 +66,22 @@ final class Bei_License {
 
 	/**
 	 * راه‌اندازی کیت لایسنس و بروزرسانی — از فایل اصلی افزونه فراخوانی می‌شود.
+	 *
+	 * نسخهٔ آزاد: اگر پوشهٔ wplm-client-kit همراه افزونه نباشد (بستهٔ ZIP
+	 * «نسخهٔ آزاد»)، قفل لایسنس و بروزرسانی خودکار غیرفعال می‌شود و افزونه
+	 * بدون نیاز به لایسنس کامل اجرا می‌شود (به is_active() مراجعه کنید).
 	 */
 	public static function boot() {
-		require_once BEI_PLUGIN_DIR . 'wplm-client-kit/includes/wplm-license-client.php';
-		require_once BEI_PLUGIN_DIR . 'wplm-client-kit/includes/wplm-plugin-updater.php';
+		$kit_license = BEI_PLUGIN_DIR . 'wplm-client-kit/includes/wplm-license-client.php';
+		$kit_updater = BEI_PLUGIN_DIR . 'wplm-client-kit/includes/wplm-plugin-updater.php';
+
+		if ( ! file_exists( $kit_license ) || ! file_exists( $kit_updater ) ) {
+			// نسخهٔ آزاد — کیت همراه نیست: بدون قفل و بدون بروزرسانی خودکار.
+			return;
+		}
+
+		require_once $kit_license;
+		require_once $kit_updater;
 
 		if ( ! class_exists( 'WPLM_Client_Kit_License' ) ) {
 			return;
@@ -125,6 +137,11 @@ final class Bei_License {
 	 * @return array
 	 */
 	public static function action_links( $links ) {
+		if ( null === self::$license ) {
+			// نسخهٔ آزاد — کیت لایسنس همراه نیست؛ لینکی لازم نیست.
+			return $links;
+		}
+
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return $links;
 		}
@@ -144,9 +161,13 @@ final class Bei_License {
 	/**
 	 * آیا لایسنس فعال است؟
 	 *
-	 * نکته: ثابت BEI_LICENSE_BYPASS در wp-config.php فقط برای سایت‌های
+	 * نکته ۱: ثابت BEI_LICENSE_BYPASS در wp-config.php فقط برای سایت‌های
 	 * مالک/توسعه‌دهنده است و قفل را دور می‌زند:
 	 *   define( 'BEI_LICENSE_BYPASS', true );
+	 *
+	 * نکته ۲ (نسخهٔ آزاد): اگر کیت لایسنس همراه افزونه نباشد (boot() آن را
+	 * بارگذاری نکرده)، افزونه بدون قفل اجرا می‌شود — این رفتار، بستهٔ ZIP
+	 * «نسخهٔ آزاد» را ممکن می‌کند.
 	 *
 	 * @return bool
 	 */
@@ -155,7 +176,12 @@ final class Bei_License {
 			return true;
 		}
 
-		return self::$license instanceof WPLM_Client_Kit_License && self::$license->is_active();
+		// نسخهٔ آزاد: کیت لایسنس بارگذاری نشده → بدون قفل.
+		if ( null === self::$license ) {
+			return true;
+		}
+
+		return self::$license->is_active();
 	}
 
 	/**
