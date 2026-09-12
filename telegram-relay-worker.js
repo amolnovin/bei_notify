@@ -32,9 +32,18 @@
  *
  * امنیت: فقط مسیرهای /bot... مجاز هستند؛ رله پراکسیِ باز نمی‌شود
  * و با دو دربان بالا فقط ربات‌ها/سایت‌های مجاز استفاده می‌کنند.
+ *
+ * ⏱️ مهلت upstream (UPSTREAM_TIMEOUT): اگر api.telegram.org از سمت کلودفلر
+ * پاسخ ندهد، به‌جای آویزان‌ماندن بی‌پایانِ کلاینت (که در وردپرس خطای
+ * «cURL error 28: Operation timed out ... 0 bytes» و «cURL error 52:
+ * Empty reply from server» می‌سازد) بعد از ۱۲ ثانیه پاسخ سریع 504
+ * برمی‌گردد تا افزونه بلافاصله مسیر جایگزین (Failover) را امتحان کند.
  */
 
 const TARGET = 'https://api.telegram.org'; // مقصد ثابت — فقط API تلگرام
+
+// مهلت انتظار پاسخ مقصد (میلی‌ثانیه). ۱۲۰۰۰ = ۱۲ ثانیه.
+const UPSTREAM_TIMEOUT = 12000;
 
 /* ---------- تنظیمات چندسایتی (اختیاری) ---------- */
 
@@ -93,13 +102,30 @@ export default {
 			redirect: 'manual',
 		};
 
-		// ارسال بدنه برای POST (sendMessage و...)
+		// بدنه را کامل بخوان (JSON کوچک sendMessage) — جلوگیری از آویزان‌شدن
+		// استریم بدنه که در برخی مسیرها باعث قطع پاسخ می‌شود.
 		if (request.method !== 'GET' && request.method !== 'HEAD') {
-			init.body = request.body;
-			init.duplex = 'half'; // طبق استاندارد fetch برای بدنه استریمی
+			init.body = await request.arrayBuffer();
 		}
 
-		const response = await fetch(upstream.toString(), init);
+		// مهلت سخت‌گیرانه: اگر مقصد پاسخ نداد، 504 سریع برگردان تا کلاینت گیر نکند.
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT);
+
+		let response;
+		try {
+			response = await fetch(upstream.toString(), {
+				...init,
+				signal: controller.signal,
+			});
+		} catch (err) {
+			return new Response('Gateway Timeout: upstream did not respond in ' + (UPSTREAM_TIMEOUT / 1000) + 's', {
+				status: 504,
+				headers: { 'content-type': 'text/plain; charset=utf-8' },
+			});
+		} finally {
+			clearTimeout(timer);
+		}
 
 		return new Response(response.body, {
 			status: response.status,

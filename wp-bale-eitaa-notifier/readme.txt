@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.7
+Stable tag: 3.1.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.8 =
+* نام میزبان (رله یا مستقیم) در متن خطاهای شبکه — تشخیص فوری مسیر خراب
+* رفع خطای «Cannot parse supplied IRI» واتساپ: دنبال‌نکردن Redirect در همه درخواست‌ها
+* رفع مثبت کاذب CallMeBot (پاسخ‌های HTML خطا مثل «APIKey is invalid»)
+* نرمال‌سازی خودکار آدرس رله (بدون https:// یا با فاصله)
+* رله‌های Cloudflare Worker با مهلت ۱۲ ثانیه‌ای و بافر بدنه — بدون آویزان‌ماندن کلاینت
 
 = 3.1.7 =
 * رفع خطای «cURL error 28: Operation timed out after 10000 milliseconds» در تلگرام/واتساپ: بازنویسی مهلت اتصال و مهلت کلی درخواست‌های پیام‌رسان‌ها (مقابله با محدودیت ۱۰ ثانیه‌ای کتابخانه Requests و افزونه‌های دیگر) + تنظیم «مهلت کلی هر درخواست»

@@ -15,9 +15,17 @@
  *  ۵) دکمه «تست واتساپ» را بزنید.
  *
  * امنیت: فقط مسیر /whatsapp.php مجاز است؛ رله پراکسیِ باز نمی‌شود.
+ *
+ * ⏱️ مهلت upstream (UPSTREAM_TIMEOUT): اگر api.callmebot.com از سمت کلودفلر
+ * پاسخ ندهد، به‌جای آویزان‌ماندن بی‌پایانِ کلاینت (خطاهای cURL error 28
+ * با ۰ بایت و «Empty reply from server» در وردپرس) بعد از ۱۲ ثانیه پاسخ
+ * سریع 504 برمی‌گردد تا افزونه بلافاصله مسیر مستقیم (Failover) را امتحان کند.
  */
 
 const TARGET = 'https://api.callmebot.com'; // مقصد ثابت
+
+// مهلت انتظار پاسخ مقصد (میلی‌ثانیه). ۱۲۰۰۰ = ۱۲ ثانیه.
+const UPSTREAM_TIMEOUT = 12000;
 
 export default {
 	async fetch(request) {
@@ -42,12 +50,29 @@ export default {
 			redirect: 'manual',
 		};
 
+		// بدنه را کامل بخوان — جلوگیری از آویزان‌شدن استریم بدنه.
 		if (request.method !== 'GET' && request.method !== 'HEAD') {
-			init.body = request.body;
-			init.duplex = 'half'; // طبق استاندارد fetch برای بدنه استریمی
+			init.body = await request.arrayBuffer();
 		}
 
-		const response = await fetch(upstream.toString(), init);
+		// مهلت سخت‌گیرانه: اگر مقصد پاسخ نداد، 504 سریع برگردان تا کلاینت گیر نکند.
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT);
+
+		let response;
+		try {
+			response = await fetch(upstream.toString(), {
+				...init,
+				signal: controller.signal,
+			});
+		} catch (err) {
+			return new Response('Gateway Timeout: upstream did not respond in ' + (UPSTREAM_TIMEOUT / 1000) + 's', {
+				status: 504,
+				headers: { 'content-type': 'text/plain; charset=utf-8' },
+			});
+		} finally {
+			clearTimeout(timer);
+		}
 
 		return new Response(response.body, {
 			status: response.status,

@@ -133,6 +133,47 @@ final class Bei_Messenger {
 	}
 
 	/**
+	 * ساخت خطای لایهٔ انتقال با نام میزبان + راهنمای فارسی.
+	 * (نام میزبان نشان می‌دهد درخواست واقعاً به کجا رفته: رله یا مسیر مستقیم —
+	 * برای تشخیص فیلترینگ از رلهٔ آویزان، حیاتی است.)
+	 *
+	 * @param WP_Error $error خطای خام wp_remote_*.
+	 * @param string   $url   آدرس درخواست.
+	 * @return WP_Error
+	 */
+	private function transport_error( $error, $url ) {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		$msg  = $error->get_error_message();
+		if ( $host ) {
+			/* translators: %s: نام میزبان */
+			$msg .= ' [' . sprintf( __( 'میزبان: %s', 'bale-eitaa-notifier' ), $host ) . ']';
+		}
+
+		return new WP_Error( $error->get_error_code(), $this->friendly_error( $msg ) );
+	}
+
+	/**
+	 * نرمال‌سازی آدرس پایهٔ رله/API: حذف فاصله‌ها، افزودن https:// در صورت
+	 * نبودن scheme و حذف اسلش انتهایی. (ورودی اشتباه کاربر — مثل رله بدون
+	 * https:// — باعث خطاهای عجیب کتابخانه HTTP مثل «Cannot parse supplied
+	 * IRI» یا «Only HTTP(S) requests are handled» می‌شود.)
+	 *
+	 * @param string $base آدرس خام.
+	 * @return string
+	 */
+	private function normalize_base( $base ) {
+		$base = trim( (string) $base );
+		if ( '' === $base ) {
+			return '';
+		}
+		if ( false === strpos( $base, '://' ) ) {
+			$base = 'https://' . $base;
+		}
+
+		return rtrim( $base, '/' );
+	}
+
+	/**
 	 * لیست شناسه‌های گفتگو یک پیام‌رسان (چند شناسه — هر کدام در یک خط یا با کاما).
 	 *
 	 * @param string $channel 'bale'، 'eitaa'، 'telegram' یا 'whatsapp'.
@@ -419,7 +460,7 @@ final class Bei_Messenger {
 		}
 
 		$base     = $options['bale_business'] ? self::BALE_BIZ_API : self::BALE_API;
-		$response = wp_remote_get( $base . $options['bale_token'] . '/getMe', array( 'timeout' => $this->timeout() ) );
+		$response = wp_remote_get( $base . $options['bale_token'] . '/getMe', array( 'timeout' => $this->timeout(), 'redirection' => 0 ) );
 
 		return $this->check_response( $response, __( 'بله', 'bale-eitaa-notifier' ) );
 	}
@@ -556,7 +597,7 @@ final class Bei_Messenger {
 			return new WP_Error( 'bei_config', __( 'توکن ایتا تنظیم نشده است.', 'bale-eitaa-notifier' ) );
 		}
 
-		$response = wp_remote_get( self::EITAA_API . $options['eitaa_token'] . '/getMe', array( 'timeout' => $this->timeout() ) );
+		$response = wp_remote_get( self::EITAA_API . $options['eitaa_token'] . '/getMe', array( 'timeout' => $this->timeout(), 'redirection' => 0 ) );
 
 		return $this->check_response( $response, __( 'ایتا', 'bale-eitaa-notifier' ) );
 	}
@@ -570,7 +611,7 @@ final class Bei_Messenger {
 	 */
 	public function telegram_base() {
 		$options = $this->options();
-		$base    = ! empty( $options['tg_api_base'] ) ? rtrim( $options['tg_api_base'], '/' ) : self::TELEGRAM_API;
+		$base    = ! empty( $options['tg_api_base'] ) ? $this->normalize_base( $options['tg_api_base'] ) : self::TELEGRAM_API;
 
 		return $base . '/bot';
 	}
@@ -733,7 +774,7 @@ final class Bei_Messenger {
 		}
 
 		$url      = $this->with_relay_key( $this->telegram_base() . $options['tg_token'] . '/getMe' );
-		$response = wp_remote_get( $url, array( 'timeout' => $this->timeout() ) );
+		$response = wp_remote_get( $url, array( 'timeout' => $this->timeout(), 'redirection' => 0 ) );
 
 		return $this->check_response( $response, __( 'تلگرام', 'bale-eitaa-notifier' ) );
 	}
@@ -789,17 +830,22 @@ final class Bei_Messenger {
 	 * @return array|WP_Error
 	 */
 	private function telegram_post( $url, $payload ) {
-		return $this->check_response(
-			wp_remote_post(
-				$url,
-				array(
-					'timeout' => $this->timeout(),
-					'headers' => array( 'Content-Type' => 'application/json' ),
-					'body'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
-				)
-			),
-			__( 'تلگرام', 'bale-eitaa-notifier' )
+		$response = wp_remote_post(
+			$url,
+			array(
+				'timeout'     => $this->timeout(),
+				'redirection' => 0, // دنبال‌نکردن Redirect — خطاهای عجیب Location (مثل «Cannot parse supplied IRI») را حذف می‌کند.
+				'headers'     => array( 'Content-Type' => 'application/json' ),
+				'body'        => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
+			)
 		);
+
+		if ( is_wp_error( $response ) ) {
+			// خطای لایهٔ انتقال — همراه با نام میزبان (رله یا مستقیم؟) و راهنمای فارسی.
+			return $this->transport_error( $response, $url );
+		}
+
+		return $this->check_response( $response, __( 'تلگرام', 'bale-eitaa-notifier' ) );
 	}
 
 	/**
@@ -812,12 +858,12 @@ final class Bei_Messenger {
 	 */
 	private function telegram_alt_url( $url ) {
 		$options = $this->options();
-		$primary = ! empty( $options['tg_api_base'] ) ? rtrim( $options['tg_api_base'], '/' ) : self::TELEGRAM_API;
+		$primary = ! empty( $options['tg_api_base'] ) ? $this->normalize_base( $options['tg_api_base'] ) : self::TELEGRAM_API;
 
 		// رلهٔ دوم صریح (اختیاری) — اولویت اول.
 		if ( ! empty( $options['tg_api_base_alt'] ) ) {
-			$alt_base = rtrim( $options['tg_api_base_alt'], '/' );
-			if ( $alt_base !== $primary ) {
+			$alt_base = $this->normalize_base( $options['tg_api_base_alt'] );
+			if ( $alt_base && $alt_base !== $primary ) {
 				return $this->with_relay_key( $alt_base . substr( $url, strlen( $primary ) ) );
 			}
 		}
@@ -844,7 +890,7 @@ final class Bei_Messenger {
 	public function wa_base( $default ) {
 		$options = $this->options();
 
-		return ! empty( $options['wa_api_base'] ) ? rtrim( $options['wa_api_base'], '/' ) : $default;
+		return ! empty( $options['wa_api_base'] ) ? $this->normalize_base( $options['wa_api_base'] ) : $default;
 	}
 
 	/**
@@ -861,8 +907,8 @@ final class Bei_Messenger {
 			return null;
 		}
 
-		$custom = rtrim( $options['wa_api_base'], '/' );
-		if ( $custom === $default_base || 0 !== strpos( $url, $custom ) ) {
+		$custom = $this->normalize_base( $options['wa_api_base'] );
+		if ( '' === $custom || $custom === $default_base || 0 !== strpos( $url, $custom ) ) {
 			return null;
 		}
 
@@ -880,9 +926,16 @@ final class Bei_Messenger {
 	 * @return array|WP_Error
 	 */
 	private function wa_post( $url, $args, $source, $default_base ) {
-		$args['timeout'] = $this->timeout();
+		$args['timeout']     = $this->timeout();
+		$args['redirection'] = 0; // دنبال‌نکردن Redirect (حذف خطاهای عجیب Location)
 
-		$result = $this->wa_check_response( wp_remote_post( $url, $args ), $source );
+		$response = wp_remote_post( $url, $args );
+		if ( is_wp_error( $response ) ) {
+			// خطای لایهٔ انتقال — همراه با نام میزبان (رله یا مستقیم؟) و راهنمای فارسی.
+			$result = $this->transport_error( $response, $url );
+		} else {
+			$result = $this->wa_check_response( $response, $source );
+		}
 
 		if ( $this->is_network_error( $result ) ) {
 			$alt = $this->wa_failover_url( $url, $default_base );
@@ -894,9 +947,12 @@ final class Bei_Messenger {
 					'',
 					array( 'alt' => wp_parse_url( $alt, PHP_URL_HOST ) )
 				);
-				$alt_result = $this->wa_check_response( wp_remote_post( $alt, $args ), $source );
-				if ( ! $this->is_network_error( $alt_result ) ) {
-					return $alt_result;
+				$alt_response = wp_remote_post( $alt, $args );
+				if ( ! is_wp_error( $alt_response ) ) {
+					$alt_result = $this->wa_check_response( $alt_response, $source );
+					if ( ! $this->is_network_error( $alt_result ) ) {
+						return $alt_result;
+					}
 				}
 			}
 		}
@@ -1000,7 +1056,7 @@ final class Bei_Messenger {
 			$this->wa_base( self::CALLMEBOT_API ) . '/whatsapp.php'
 		);
 
-		$response = wp_remote_get( $url, array( 'timeout' => $this->timeout() ) );
+		$response = wp_remote_get( $url, array( 'timeout' => $this->timeout(), 'redirection' => 0 ) );
 
 		// در خطای شبکه (cURL error 28 و...) یک بار از آدرس مستقیم درگاه تلاش می‌شود.
 		if ( is_wp_error( $response ) && $this->is_network_error( $response ) ) {
@@ -1013,7 +1069,7 @@ final class Bei_Messenger {
 					'',
 					array( 'alt' => wp_parse_url( $alt, PHP_URL_HOST ) )
 				);
-				$alt_response = wp_remote_get( $alt, array( 'timeout' => $this->timeout() ) );
+				$alt_response = wp_remote_get( $alt, array( 'timeout' => $this->timeout(), 'redirection' => 0 ) );
 				if ( ! is_wp_error( $alt_response ) ) {
 					$response = $alt_response;
 				}
@@ -1021,7 +1077,8 @@ final class Bei_Messenger {
 		}
 
 		if ( is_wp_error( $response ) ) {
-			return new WP_Error( $response->get_error_code(), $this->friendly_error( $response->get_error_message() ) );
+			// همراه با نام میزبان (رله یا مستقیم؟) و راهنمای فارسی.
+			return $this->transport_error( $response, $url );
 		}
 
 		$code = wp_remote_retrieve_response_code( $response );
@@ -1039,14 +1096,17 @@ final class Bei_Messenger {
 			);
 		}
 
-		// پاسخ CallMeBot متن ساده است؛ شروع با ERROR یعنی خطا.
-		if ( '' === $body || 0 === stripos( $body, 'error' ) ) {
+		// پاسخ موفق CallMeBot متن ساده است؛ شروع با ERROR یعنی خطا و شروع با
+		// «<» یعنی صفحهٔ HTML خطا (مثل «APIKey is invalid» که با HTTP 203 می‌آید).
+		if ( '' === $body || 0 === stripos( $body, 'error' ) || 0 === strpos( $body, '<' ) ) {
+			$summary = function_exists( 'mb_substr' ) ? mb_substr( strip_tags( $body ), 0, 160 ) : substr( strip_tags( $body ), 0, 160 );
+
 			return new WP_Error(
 				'bei_api',
 				sprintf(
 					/* translators: %s: متن پاسخ */
 					__( 'خطا در واتساپ (CallMeBot): %s', 'bale-eitaa-notifier' ),
-					$body ? $body : __( 'پاسخ خالی', 'bale-eitaa-notifier' )
+					$summary ? $summary : __( 'پاسخ خالی', 'bale-eitaa-notifier' )
 				)
 			);
 		}
@@ -1302,6 +1362,11 @@ final class Bei_Messenger {
 	 * @return string
 	 */
 	private function friendly_error( $desc ) {
+		// اگر راهنما قبلاً اضافه شده، دوباره اضافه نشود (زنجیرهٔ چندبارهٔ خطاها).
+		if ( false !== stripos( (string) $desc, '💡' ) ) {
+			return $desc;
+		}
+
 		$map = array(
 			'bot was blocked by the user' => __( 'کاربر مقصد ربات را مسدود کرده است — در پیام‌رسان وارد گفتگوی ربات شوید و «رفع مسدودیت» را بزنید، یا برای اطلاع‌رسانی سایت به‌جای چت شخصی از کانال استفاده کنید (ربات را ادمین کانال کنید).', 'bale-eitaa-notifier' ),
 			'chat not found'              => __( 'گفتگو پیدا نشد — ربات باید عضو گفتگو باشد (در کانال/گروه حتماً ادمین باشد) و chat_id درست باشد.', 'bale-eitaa-notifier' ),
