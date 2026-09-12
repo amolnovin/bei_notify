@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.8
+Stable tag: 3.1.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.9 =
+* ابزار «بررسی اتصال به رله» حالا مرحله‌به‌مرحله عیب‌یابی می‌کند (DNS / اتصال / TLS / پاسخ) با زمان هر مرحله و تشخیص فیلترینگ SNI (مثل *.workers.dev) و مسدودکننده‌های وردپرسی
+* اسکریپت مستقل bei-network-diagnose.php برای اجرای مستقیم روی سرور (بدون وردپرس)
 
 = 3.1.8 =
 * نام میزبان (رله یا مستقیم) در متن خطاهای شبکه — تشخیص فوری مسیر خراب

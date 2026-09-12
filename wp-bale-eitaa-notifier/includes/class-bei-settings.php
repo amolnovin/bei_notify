@@ -985,6 +985,10 @@ final class Bei_Settings {
 				exit;
 			case 'relay':
 				// بررسی دسترسی سرور به رله و API مستقیم — بدون نیاز به توکن.
+				// کاوش مرحله‌به‌مرحله ممکن است تا حدود یک دقیقه طول بکشد.
+				if ( function_exists( 'set_time_limit' ) ) {
+					@set_time_limit( 240 );
+				}
 				set_transient( 'bei_test_result', $this->run_relay_test(), 60 );
 				wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'admin.php' ) ) );
 				exit;
@@ -1099,6 +1103,11 @@ final class Bei_Settings {
 	 * تنظیم‌شده — برای تشخیص خطای cURL error 28 (سلامت ورکر از بیرون ثابت نمی‌کند
 	 * که سرور سایت هم به آن می‌رسد).
 	 *
+	 * نسخهٔ 3.1.9: کاوش مرحله‌به‌مرحله — DNS ← اتصال TCP ← TLS ← پاسخ HTTP
+	 * با زمان هر مرحله؛ و تشخیص دو لایهٔ مسدودکنندهٔ جدا:
+	 *   ۱) فیلترینگ سراسری (SNI/IP) — در مرحلهٔ TLS/اتصال می‌میرد
+	 *   ۲) افزونهٔ مسدودکنندهٔ درخواست‌های خارجی وردپرس — فقط در مسیر wp_remote
+	 *
 	 * @return array ['ok', پیام] یا ['error', پیام]
 	 */
 	private function run_relay_test() {
@@ -1123,51 +1132,70 @@ final class Bei_Settings {
 		// رله‌های تنظیم‌شده.
 		$relays = array();
 		if ( ! empty( $options['tg_api_base'] ) ) {
-			$relays[ __( 'رله تلگرام', 'bale-eitaa-notifier' ) ] = rtrim( $options['tg_api_base'], '/' ) . '/';
+			$relays[ __( 'رله تلگرام', 'bale-eitaa-notifier' ) ] = $this->normalize_relay_url( $options['tg_api_base'] );
 		}
 		if ( ! empty( $options['tg_api_base_alt'] ) ) {
-			$relays[ __( 'رله دوم تلگرام', 'bale-eitaa-notifier' ) ] = rtrim( $options['tg_api_base_alt'], '/' ) . '/';
+			$relays[ __( 'رله دوم تلگرام', 'bale-eitaa-notifier' ) ] = $this->normalize_relay_url( $options['tg_api_base_alt'] );
 		}
 		if ( ! empty( $options['wa_api_base'] ) ) {
-			$relays[ __( 'رله واتساپ', 'bale-eitaa-notifier' ) ] = rtrim( $options['wa_api_base'], '/' ) . '/';
+			$relays[ __( 'رله واتساپ', 'bale-eitaa-notifier' ) ] = $this->normalize_relay_url( $options['wa_api_base'] );
 		}
 
 		if ( empty( $direct ) && empty( $relays ) ) {
 			return array( 'error', __( 'هیچ پیام‌رسانی فعال نیست و رله‌ای تنظیم نشده است.', 'bale-eitaa-notifier' ) );
 		}
 
-		$timeout = min( 8, max( 3, (int) $options['bei_http_timeout'] / 2 ) );
+		$timeout = min( 6, max( 3, (int) $options['bei_http_timeout'] / 2 ) );
 
-		$check = function ( $url ) use ( $timeout ) {
-			$start    = microtime( true );
-			$response = wp_remote_get(
-				$url,
-				array(
-					'timeout'     => $timeout,
-					'redirection' => 0,
-				)
-			);
-			$elapsed  = round( ( microtime( true ) - $start ) * 1000 );
+		$direct_failed = 0;
+		foreach ( $direct as $label => $url ) {
+			// ۱) مسیر واقعی ارسال‌ها (wp_remote — شامل فیلترهای همهٔ افزونه‌ها)
+			$wp_response = wp_remote_get( $url, array( 'timeout' => $timeout, 'redirection' => 0 ) );
 
-			if ( is_wp_error( $response ) ) {
-				return sprintf( '❌ %s', $response->get_error_message() );
+			if ( ! is_wp_error( $wp_response ) ) {
+				$code     = wp_remote_retrieve_response_code( $wp_response );
+				$lines[]  = sprintf( '%s: ✔ پاسخ %d', $label, $code );
+				continue;
 			}
 
-			$code = wp_remote_retrieve_response_code( $response );
+			$direct_failed++;
+			$wp_msg = $wp_response->get_error_message();
 
-			return sprintf( '✔ پاسخ %d در %d میلی‌ثانیه', $code, $elapsed );
-		};
+			// ۲) کاوش خام شبکه (cURL مستقیم — بدون لایهٔ وردپرس)
+			$probe = $this->probe_endpoint( $url, $timeout );
+			$line  = sprintf( '%s: %s', $label, $this->format_probe( $probe ) );
 
-		$direct_results = array();
-		foreach ( $direct as $label => $url ) {
-			$direct_results[] = $check( $url );
-			$lines[]          = sprintf( '%s: %s', $label, end( $direct_results ) );
+			if ( $probe['ok'] ) {
+				// شبکه سالم است ولی wp_remote خطا داد → مسدودیت فقط در لایهٔ وردپرس!
+				/* translators: %s: پیام خطای وردپرس */
+				$line .= ' — ⚠ ' . sprintf( __( 'مسیر خام شبکه سالم است ولی وردپرس این خطا را داد: «%s» — یک افزونهٔ «مسدودکنندهٔ درخواست‌های خارجی» (مثل GG External Blocker یا میوپلاگین امنیتی هاست) فعال است؛ آن را غیرفعال کنید یا دامنه را در فهرست مجازش بگذارید.', 'bale-eitaa-notifier' ), $wp_msg );
+			} elseif ( ! $this->looks_network_error( $wp_msg ) ) {
+				// پیام وردپرس شبیه خطای شبکه نیست (مثلاً پیام فارسی مسدودیت) —
+				// یعنی علاوه بر شبکه، یک لایهٔ وردپرسی هم مانع شده است.
+				/* translators: %s: پیام خطای وردپرس */
+				$line .= ' — ⚠ ' . sprintf( __( 'لایهٔ وردپرس هم جداگانه این خطا را می‌دهد: «%s» (افزونهٔ مسدودکنندهٔ درخواست‌های خارجی — غیرفعالش کنید یا دامنه را مجاز کنید).', 'bale-eitaa-notifier' ), $wp_msg );
+			}
+
+			$lines[] = $line;
 		}
 
-		$relay_results = array();
+		$relay_failed = 0;
 		foreach ( $relays as $label => $url ) {
-			$relay_results[] = $check( $url );
-			$lines[]         = sprintf( '%s (%s): %s', $label, wp_parse_url( $url, PHP_URL_HOST ), end( $relay_results ) );
+			$probe = $this->probe_endpoint( $url, $timeout );
+
+			if ( ! $probe['ok'] ) {
+				$relay_failed++;
+			}
+
+			$host = wp_parse_url( $url, PHP_URL_HOST );
+			$line = sprintf( '%s (%s): %s', $label, $host, $this->format_probe( $probe ) );
+
+			// راهنمای اختصاصی: دامنه‌های workers.dev در ایران در لایهٔ SNI فیلترند.
+			if ( ! $probe['ok'] && 'tls' === $probe['stage'] && false !== stripos( (string) $host, 'workers.dev' ) ) {
+				$line .= ' — 💡 ' . __( 'دامنهٔ *.workers.dev در شبکهٔ ایران در لایهٔ SNI فیلتر می‌شود (TCP وصل می‌شود ولی TLS/پاسخ هرگز نمی‌رسد) — مجازکردن در پنل هاست اثری ندارد. در Cloudflare برای این ورکر یک «Custom Domain» روی دامنهٔ خودتان بسازید (Workers & Pages ← ورکر ← Settings ← Domains & Routes) و آدرس رله را در تنظیمات افزونه عوض کنید.', 'bale-eitaa-notifier' );
+			}
+
+			$lines[] = $line;
 		}
 
 		if ( ! empty( $options['tg_proxy_enabled'] ) ) {
@@ -1177,28 +1205,15 @@ final class Bei_Settings {
 		$status = 'ok';
 		$hint   = '';
 
-		$all_direct_failed = ! empty( $direct_results );
-		foreach ( $direct_results as $r ) {
-			if ( false === stripos( $r, '❌' ) ) {
-				$all_direct_failed = false;
-			}
-		}
-		$all_relay_failed = ! empty( $relay_results );
-		foreach ( $relay_results as $r ) {
-			if ( false === stripos( $r, '❌' ) ) {
-				$all_relay_failed = false;
-			}
-		}
-
-		if ( $all_relay_failed ) {
+		if ( $relay_failed > 0 && $relay_failed === count( $relays ) ) {
 			// همه رله‌ها از دید سرور در دسترس نیستند — مشکل اصلی همین است.
 			$status = 'error';
-			$hint   = __( 'هیچ‌کدام از رله‌ها از «سرور سایت» در دسترس نیست — ورکر ممکن است از بیرون سالم باشد ولی سرور شما به آن نرسد (فیلترینگ/مسیر پراکسی/آدرس اشتباه). آدرس رله را اصلاح کنید یا پراکسی تنظیم کنید.', 'bale-eitaa-notifier' );
-		} elseif ( $all_direct_failed && empty( $relay_results ) ) {
+			$hint   = __( 'هیچ‌کدام از رله‌ها از «سرور سایت» در دسترس نیست — ورکر ممکن است از بیرون سالم باشد ولی سرور شما به آن نرسد (فیلترینگ SNI/IP یا آدرس اشتباه). اگر آدرس رله روی *.workers.dev است، دامنهٔ اختصاصی تنظیم کنید؛ وگرنه آدرس رله یا پراکسی را اصلاح کنید.', 'bale-eitaa-notifier' );
+		} elseif ( $direct_failed > 0 && $direct_failed === count( $direct ) && empty( $relays ) ) {
 			$status = 'error';
-			$hint   = __( 'سرور به هیچ API پیام‌رسانی دسترسی ندارد — برای سرور داخل ایران، «رله» یا «پراکسی» لازم است.', 'bale-eitaa-notifier' );
-		} elseif ( false !== stripos( implode( ' ', $lines ), '❌' ) ) {
-			$hint = __( 'برخی مقاصد از سرور در دسترس نیستند — برای همان پیام‌رسان از رله یا پراکسی استفاده کنید.', 'bale-eitaa-notifier' );
+			$hint   = __( 'سرور به هیچ API پیام‌رسانی دسترسی ندارد — برای سرور داخل ایران، «رله» (روی دامنهٔ اختصاصی) یا «پراکسی» لازم است.', 'bale-eitaa-notifier' );
+		} elseif ( $direct_failed > 0 || $relay_failed > 0 ) {
+			$hint = __( 'برخی مقاصد از سرور در دسترس نیستند — برای همان پیام‌رسان از رلهٔ روی «دامنهٔ اختصاصی» یا پراکسی استفاده کنید.', 'bale-eitaa-notifier' );
 		}
 
 		$message = implode( ' — ', $lines );
@@ -1207,6 +1222,240 @@ final class Bei_Settings {
 		}
 
 		return array( 'ok' === $status ? 'ok' : 'error', $message );
+	}
+
+	/**
+	 * نرمال‌سازی آدرس رله برای کاوش (بدون scheme → https:// و حذف اسلش انتهایی).
+	 *
+	 * @param string $base آدرس خام.
+	 * @return string
+	 */
+	private function normalize_relay_url( $base ) {
+		$base = trim( (string) $base );
+		if ( '' === $base ) {
+			return '';
+		}
+		if ( false === strpos( $base, '://' ) ) {
+			$base = 'https://' . $base;
+		}
+
+		return rtrim( $base, '/' ) . '/';
+	}
+
+	/**
+	 * آیا پیام خطا شبیه خطای «شبکه» است (نه پیام فارسی مسدودیت لایهٔ وردپرس)؟
+	 *
+	 * @param string $message پیام خطا.
+	 * @return bool
+	 */
+	private function looks_network_error( $message ) {
+		$needles = array( 'cURL error', 'timed out', 'could not resolve', 'connection refused', 'connection reset', 'empty reply', 'operation timed' );
+
+		foreach ( $needles as $needle ) {
+			if ( false !== stripos( (string) $message, $needle ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * کاوش نقطه‌به‌نقطهٔ یک آدرس: DNS ← اتصال TCP ← TLS ← پاسخ HTTP.
+	 * خروجی: array('ok','code','dns_ms','connect_ms','tls_ms','total_ms','error','stage')
+	 * stage: '' | 'dns' | 'connect' | 'tls' | 'http' | 'net'
+	 *
+	 * @param string $url     آدرس مقصد.
+	 * @param int    $timeout مهلت (ثانیه).
+	 * @return array
+	 */
+	private function probe_endpoint( $url, $timeout ) {
+		if ( function_exists( 'curl_init' ) && function_exists( 'curl_exec' ) && function_exists( 'curl_getinfo' ) ) {
+			return $this->probe_with_curl( $url, $timeout );
+		}
+
+		return $this->probe_with_http( $url, $timeout );
+	}
+
+	/**
+	 * کاوش با cURL خام — با زمان دقیق هر مرحله.
+	 *
+	 * @param string $url     آدرس مقصد.
+	 * @param int    $timeout مهلت (ثانیه).
+	 * @return array
+	 */
+	private function probe_with_curl( $url, $timeout ) {
+		$result = array(
+			'ok'         => false,
+			'code'       => null,
+			'dns_ms'     => 0,
+			'connect_ms' => 0,
+			'tls_ms'     => 0,
+			'total_ms'   => 0,
+			'error'      => '',
+			'stage'      => '',
+		);
+
+		$ch = curl_init( $url );
+		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+
+		// مسیر شبکهٔ واقعی ارسال‌ها: فورس IPv4 / پراکسی از ماژول پراکسی
+		// (با timeout=120 تا ماژول، مهلتِ کاوش ما را بازنویسی نکند).
+		if ( class_exists( 'Bei_Proxy' ) ) {
+			$proxy = new Bei_Proxy();
+			$proxy->apply( $ch, array( 'timeout' => 120 ), $url );
+		}
+
+		// مهلت‌های خودِ کاوش (کوتاه تا صفحهٔ مدیریت معطل نشود).
+		curl_setopt( $ch, CURLOPT_TIMEOUT, (int) $timeout );
+		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, (int) $timeout );
+
+		curl_exec( $ch );
+		$errno = curl_errno( $ch );
+		$error = curl_error( $ch );
+		$info  = curl_getinfo( $ch );
+		curl_close( $ch );
+
+		$dns_time   = isset( $info['namelookup_time'] ) ? (float) $info['namelookup_time'] : 0.0;
+		$conn_time  = isset( $info['connect_time'] ) ? (float) $info['connect_time'] : 0.0;
+		$appconnect = isset( $info['appconnect_time'] ) ? (float) $info['appconnect_time'] : 0.0;
+
+		$result['dns_ms']     = (int) round( $dns_time * 1000 );
+		$result['connect_ms'] = (int) round( $conn_time * 1000 );
+		$result['tls_ms']     = (int) round( max( 0, ( $appconnect - $conn_time ) ) * 1000 );
+		$result['total_ms']   = (int) round( $info['total_time'] * 1000 );
+
+		if ( 0 !== $errno ) {
+			$result['error'] = $error;
+			$connected       = $conn_time > 0;
+			$tls_done        = $appconnect > 0;
+
+			switch ( $errno ) {
+				case 6: // CURLE_COULDNT_RESOLVE_HOST
+					$result['stage'] = 'dns';
+					break;
+				case 7: // CURLE_COULDNT_CONNECT
+					$result['stage'] = 'connect';
+					break;
+				case 35: // CURLE_SSL_CONNECT_ERROR
+					$result['stage'] = 'tls';
+					break;
+				case 52: // CURLE_GOT_NOTHING — پاسخ خالی
+					$result['stage'] = 'http';
+					break;
+				case 28: // CURLE_OPERATION_TIMEDOUT — ببینیم در کدام مرحله مرد
+					if ( $connected && ! $tls_done ) {
+						$result['stage'] = 'tls'; // TCP وصل شد ولی TLS/پاسخ نیامد → فیلترینگ SNI
+					} elseif ( ! $connected ) {
+						$result['stage'] = 'connect'; // اصلاً اتصال برقرار نشد → فیلترینگ IP
+					} else {
+						$result['stage'] = 'http'; // وصل و TLS شد ولی پاسخ HTTP نیامد
+					}
+					break;
+				default:
+					$result['stage'] = $connected ? 'http' : 'net';
+			}
+
+			return $result;
+		}
+
+		$code         = isset( $info['http_code'] ) ? (int) $info['http_code'] : 0;
+		$result['ok'] = $code > 0;
+		if ( $code > 0 ) {
+			$result['code'] = $code;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * کاوش با wp_remote_get (وقتی cURL در دسترس نیست) — بدون جزئیات مرحله.
+	 *
+	 * @param string $url     آدرس مقصد.
+	 * @param int    $timeout مهلت (ثانیه).
+	 * @return array
+	 */
+	private function probe_with_http( $url, $timeout ) {
+		$result = array(
+			'ok'         => false,
+			'code'       => null,
+			'dns_ms'     => 0,
+			'connect_ms' => 0,
+			'tls_ms'     => 0,
+			'total_ms'   => 0,
+			'error'      => '',
+			'stage'      => '',
+		);
+
+		$start    = microtime( true );
+		$response = wp_remote_get( $url, array( 'timeout' => (int) $timeout, 'redirection' => 0 ) );
+		$result['total_ms'] = (int) round( ( microtime( true ) - $start ) * 1000 );
+
+		if ( is_wp_error( $response ) ) {
+			$msg = $response->get_error_message();
+			$result['error'] = $msg;
+			if ( false !== stripos( $msg, 'resolve' ) || false !== stripos( $msg, 'error 6' ) ) {
+				$result['stage'] = 'dns';
+			} elseif ( false !== stripos( $msg, 'connection timed out' ) || false !== stripos( $msg, 'error 7' ) || false !== stripos( $msg, 'refused' ) ) {
+				$result['stage'] = 'connect';
+			} elseif ( false !== stripos( $msg, 'empty reply' ) || false !== stripos( $msg, 'error 52' ) ) {
+				$result['stage'] = 'http';
+			} elseif ( false !== stripos( $msg, 'timed out' ) ) {
+				$result['stage'] = 'connect';
+			} else {
+				$result['stage'] = 'net';
+			}
+
+			return $result;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		if ( $code > 0 ) {
+			$result['ok']   = true;
+			$result['code'] = $code;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * متن فارسی نتیجهٔ کاوش بر اساس مرحلهٔ شکست.
+	 *
+	 * @param array $probe خروجی probe_endpoint.
+	 * @return string
+	 */
+	private function format_probe( $probe ) {
+		if ( ! empty( $probe['ok'] ) ) {
+			/* translators: 1: کد HTTP، 2: کل زمان، 3: زمان DNS، 4: زمان اتصال، 5: زمان TLS */
+			return sprintf(
+				__( '✔ پاسخ %1$d در %2$dms (DNS %3$dms + اتصال %4$dms + TLS %5$dms)', 'bale-eitaa-notifier' ),
+				(int) $probe['code'],
+				(int) $probe['total_ms'],
+				(int) $probe['dns_ms'],
+				(int) $probe['connect_ms'],
+				(int) $probe['tls_ms']
+			);
+		}
+
+		$error = isset( $probe['error'] ) && '' !== $probe['error'] ? ' — ' . $probe['error'] : '';
+
+		switch ( $probe['stage'] ) {
+			case 'dns':
+				/* translators: 1: زمان سپری‌شده، 2: پیام خطا */
+				return sprintf( __( '❌ DNS: نام دامنه به IP تبدیل نشد (%1$dms)%2$s — تنظیمات DNS سرور/هاست را بررسی کنید.', 'bale-eitaa-notifier' ), (int) $probe['total_ms'], $error );
+			case 'connect':
+				/* translators: 1: زمان سپری‌شده، 2: پیام خطا */
+				return sprintf( __( '❌ اتصال برقرار نشد (%1$dms)%2$s — IP مقصد از سرور شما در دسترس نیست: فیلترینگ IP یا فایروال هاست/سرور.', 'bale-eitaa-notifier' ), (int) $probe['total_ms'], $error );
+			case 'tls':
+				/* translators: 1: زمان اتصال TCP، 2: زمان سپری‌شده */
+				return sprintf( __( '❌ اتصال TCP در %1$dms برقرار شد ولی TLS/پاسخ هرگز نرسید (%2$dms) — نشانهٔ فیلترینگ SNI (نام دامنه در شبکهٔ ملی مسدود است).', 'bale-eitaa-notifier' ), (int) $probe['connect_ms'], (int) $probe['total_ms'] );
+			case 'http':
+				/* translators: 1: زمان سپری‌شده، 2: پیام خطا */
+				return sprintf( __( '❌ اتصال برقرار شد ولی پاسخ HTTP نرسید/خالی بود (%1$dms)%2$s — مقصد درخواست را بی‌پاسخ رها کرد.', 'bale-eitaa-notifier' ), (int) $probe['total_ms'], $error );
+			default:
+				/* translators: 1: زمان سپری‌شده، 2: پیام خطا */
+				return sprintf( __( '❌ خطای شبکه (%1$dms)%2$s', 'bale-eitaa-notifier' ), (int) $probe['total_ms'], $error );
+		}
 	}
 
 	/**
