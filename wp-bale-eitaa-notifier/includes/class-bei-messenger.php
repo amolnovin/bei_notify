@@ -82,6 +82,57 @@ final class Bei_Messenger {
 	}
 
 	/**
+	 * مهلت کلی درخواست‌های HTTP پیام‌رسان‌ها (ثانیه).
+	 *
+	 * از تنظیم «مهلت کلی هر درخواست» (bei_http_timeout) می‌آید — پیش‌فرض ۳۰.
+	 * این مقدار علاوه بر wp_remote_* در ماژول پراکسی هم روی CURLOPT_TIMEOUT
+	 * بازنویسی می‌شود تا افزونه‌هایی که مهلت وردپرس را به ۱۰ ثانیه محدود
+	 * می‌کنند نتوانند ارسال‌های ما را زودتر قطع کنند.
+	 *
+	 * @return int
+	 */
+	private function timeout() {
+		$options = $this->options();
+		$value   = isset( $options['bei_http_timeout'] ) ? (int) $options['bei_http_timeout'] : self::TIMEOUT;
+
+		return min( 300, max( 10, $value > 0 ? $value : self::TIMEOUT ) );
+	}
+
+	/**
+	 * آیا خطا از نوع «شبکه» است (نه خطای API)؟
+	 * برای این خطاها ارسال از مسیر جایگزین (رله ↔ مستقیم) تکرار می‌شود.
+	 *
+	 * @param WP_Error|null $error خطای درخواست.
+	 * @return bool
+	 */
+	private function is_network_error( $error ) {
+		if ( ! is_wp_error( $error ) ) {
+			return false;
+		}
+
+		$message = $error->get_error_message();
+		$needles = array(
+			'cURL error 28',       // مهلت به پایان رسید
+			'cURL error 6',        // DNS نامعتبر
+			'cURL error 7',        // اتصال برقرار نشد
+			'cURL error 35',       // خطای TLS
+			'timed out',           // شکل‌های مختلف مهلت
+			'could not resolve',   // DNS
+			'connection refused',  // پورت بسته
+			'connection reset',    // قطع اتصال
+			'empty reply',         // پاسخ خالی
+		);
+
+		foreach ( $needles as $needle ) {
+			if ( false !== stripos( $message, $needle ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * لیست شناسه‌های گفتگو یک پیام‌رسان (چند شناسه — هر کدام در یک خط یا با کاما).
 	 *
 	 * @param string $channel 'bale'، 'eitaa'، 'telegram' یا 'whatsapp'.
@@ -212,7 +263,7 @@ final class Bei_Messenger {
 				$response = wp_remote_post(
 					$base . $options['bale_token'] . '/sendMessage',
 					array(
-						'timeout' => self::TIMEOUT,
+						'timeout' => $this->timeout(),
 						'headers' => array( 'Content-Type' => 'application/json' ),
 						'body'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
 					)
@@ -245,7 +296,7 @@ final class Bei_Messenger {
 			$response = wp_remote_post(
 				$url,
 				array(
-					'timeout' => self::TIMEOUT,
+					'timeout' => $this->timeout(),
 					'headers' => array( 'Content-Type' => 'application/json' ),
 					'body'    => wp_json_encode(
 						array(
@@ -312,7 +363,7 @@ final class Bei_Messenger {
 		$response = wp_remote_post(
 			self::BALE_API . $options['bale_token'] . '/sendMessage',
 			array(
-				'timeout' => self::TIMEOUT,
+				'timeout' => $this->timeout(),
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
 			)
@@ -347,7 +398,7 @@ final class Bei_Messenger {
 		$response = wp_remote_post(
 			self::EITAA_API . $options['eitaa_token'] . '/sendMessage',
 			array(
-				'timeout' => self::TIMEOUT,
+				'timeout' => $this->timeout(),
 				'body'    => $payload,
 			)
 		);
@@ -368,7 +419,7 @@ final class Bei_Messenger {
 		}
 
 		$base     = $options['bale_business'] ? self::BALE_BIZ_API : self::BALE_API;
-		$response = wp_remote_get( $base . $options['bale_token'] . '/getMe', array( 'timeout' => self::TIMEOUT ) );
+		$response = wp_remote_get( $base . $options['bale_token'] . '/getMe', array( 'timeout' => $this->timeout() ) );
 
 		return $this->check_response( $response, __( 'بله', 'bale-eitaa-notifier' ) );
 	}
@@ -412,7 +463,7 @@ final class Bei_Messenger {
 				$response = wp_remote_post(
 					self::EITAA_API . $options['eitaa_token'] . '/sendMessage',
 					array(
-						'timeout' => self::TIMEOUT,
+						'timeout' => $this->timeout(),
 						'body'    => $payload,
 					)
 				);
@@ -477,7 +528,7 @@ final class Bei_Messenger {
 		$response = wp_remote_post(
 			self::EITAA_APP_API,
 			array(
-				'timeout' => self::TIMEOUT,
+				'timeout' => $this->timeout(),
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => wp_json_encode(
 					array(
@@ -505,7 +556,7 @@ final class Bei_Messenger {
 			return new WP_Error( 'bei_config', __( 'توکن ایتا تنظیم نشده است.', 'bale-eitaa-notifier' ) );
 		}
 
-		$response = wp_remote_get( self::EITAA_API . $options['eitaa_token'] . '/getMe', array( 'timeout' => self::TIMEOUT ) );
+		$response = wp_remote_get( self::EITAA_API . $options['eitaa_token'] . '/getMe', array( 'timeout' => $this->timeout() ) );
 
 		return $this->check_response( $response, __( 'ایتا', 'bale-eitaa-notifier' ) );
 	}
@@ -682,7 +733,7 @@ final class Bei_Messenger {
 		}
 
 		$url      = $this->with_relay_key( $this->telegram_base() . $options['tg_token'] . '/getMe' );
-		$response = wp_remote_get( $url, array( 'timeout' => self::TIMEOUT ) );
+		$response = wp_remote_get( $url, array( 'timeout' => $this->timeout() ) );
 
 		return $this->check_response( $response, __( 'تلگرام', 'bale-eitaa-notifier' ) );
 	}
@@ -690,42 +741,96 @@ final class Bei_Messenger {
 	/**
 	 * ارسال JSON به تلگرام؛ در صورت خطای قالب‌بندی Markdown، بدون parse_mode تکرار می‌شود.
 	 *
+	 * در خطاهای «شبکه» (cURL error 28 و...) ارسال از مسیر جایگزین تکرار می‌شود:
+	 * اگر درخواست از رله رفته باشد مسیر مستقیم api.telegram.org امتحان می‌شود و برعکس —
+	 * تا وقتی رلهٔ شما به هر دلیل پاسخ ندهد، پیام‌ها از دست نروند.
+	 *
 	 * @param string $url     آدرس متد.
 	 * @param array  $payload بدنه درخواست.
 	 * @return array|WP_Error
 	 */
 	private function send_telegram_with_retry( $url, $payload ) {
-		$url = $this->with_relay_key( $url );
+		$url    = $this->with_relay_key( $url );
+		$result = $this->telegram_post( $url, $payload );
 
-		$result = $this->check_response(
+		// مسیر جایگزین فقط برای خطای شبکه — نه خطاهای API (توکن، مسدودیت و...).
+		if ( $this->is_network_error( $result ) ) {
+			$alt_url = $this->telegram_alt_url( $url );
+			if ( $alt_url ) {
+				bei()->logger()->log(
+					'telegram',
+					'failover',
+					'scheduled',
+					'',
+					array( 'alt' => wp_parse_url( $alt_url, PHP_URL_HOST ) )
+				);
+				$alt_result = $this->telegram_post( $alt_url, $payload );
+				// فقط اگر مسیر جایگزین واقعاً بهتر بود (موفق یا خطای غیرشبکه‌ای مثل HTTP 400).
+				if ( ! $this->is_network_error( $alt_result ) ) {
+					$result = $alt_result;
+				}
+			}
+		}
+
+		// تلگرام برای Markdown نامعتبر خطای «can't parse entities» برمی‌گرداند.
+		if ( is_wp_error( $result ) && ! empty( $payload['parse_mode'] ) && false !== stripos( $result->get_error_message(), 'parse' ) ) {
+			unset( $payload['parse_mode'] );
+			$result = $this->telegram_post( $url, $payload );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * ارسال POST به تلگرام و بررسی پاسخ.
+	 *
+	 * @param string $url     آدرس متد.
+	 * @param array  $payload بدنه درخواست.
+	 * @return array|WP_Error
+	 */
+	private function telegram_post( $url, $payload ) {
+		return $this->check_response(
 			wp_remote_post(
 				$url,
 				array(
-					'timeout' => self::TIMEOUT,
+					'timeout' => $this->timeout(),
 					'headers' => array( 'Content-Type' => 'application/json' ),
 					'body'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
 				)
 			),
 			__( 'تلگرام', 'bale-eitaa-notifier' )
 		);
+	}
 
-		// تلگرام برای Markdown نامعتبر خطای «can't parse entities» برمی‌گرداند.
-		if ( is_wp_error( $result ) && ! empty( $payload['parse_mode'] ) && false !== stripos( $result->get_error_message(), 'parse' ) ) {
-			unset( $payload['parse_mode'] );
-			$result = $this->check_response(
-				wp_remote_post(
-					$url,
-					array(
-						'timeout' => self::TIMEOUT,
-						'headers' => array( 'Content-Type' => 'application/json' ),
-						'body'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
-					)
-				),
-				__( 'تلگرام', 'bale-eitaa-notifier' )
-			);
+	/**
+	 * آدرس جایگزین برای یک آدرس تلگرام:
+	 *  - اگر tg_api_base_alt تنظیم شده باشد، همان.
+	 *  - وگرنه برعکس مسیر فعلی: رله ↔ مستقیم.
+	 *
+	 * @param string $url آدرس فعلی (با آدرس پایهٔ رله یا مستقیم).
+	 * @return string|null
+	 */
+	private function telegram_alt_url( $url ) {
+		$options = $this->options();
+		$primary = ! empty( $options['tg_api_base'] ) ? rtrim( $options['tg_api_base'], '/' ) : self::TELEGRAM_API;
+
+		// رلهٔ دوم صریح (اختیاری) — اولویت اول.
+		if ( ! empty( $options['tg_api_base_alt'] ) ) {
+			$alt_base = rtrim( $options['tg_api_base_alt'], '/' );
+			if ( $alt_base !== $primary ) {
+				return $this->with_relay_key( $alt_base . substr( $url, strlen( $primary ) ) );
+			}
 		}
 
-		return $result;
+		// برعکس مسیر فعلی: رله ← مستقیم یا مستقیم ← رله.
+		if ( $primary !== self::TELEGRAM_API && 0 === strpos( $url, $primary ) ) {
+			return $this->with_relay_key( self::TELEGRAM_API . substr( $url, strlen( $primary ) ) );
+		}
+		if ( 0 === strpos( $url, self::TELEGRAM_API ) && $primary !== self::TELEGRAM_API ) {
+			return $this->with_relay_key( $primary . substr( $url, strlen( self::TELEGRAM_API ) ) );
+		}
+
+		return null;
 	}
 
 	/* ------------------------------ واتساپ ------------------------------ */
@@ -740,6 +845,63 @@ final class Bei_Messenger {
 		$options = $this->options();
 
 		return ! empty( $options['wa_api_base'] ) ? rtrim( $options['wa_api_base'], '/' ) : $default;
+	}
+
+	/**
+	 * آدرس جایگزین (بدون رله) برای درخواست‌های واتساپ — فقط وقتی رله تنظیم شده باشد.
+	 *
+	 * @param string $url          آدرس فعلی (با آدرس رله).
+	 * @param string $default_base آدرس پایهٔ پیش‌فرض همان درگاه.
+	 * @return string|null
+	 */
+	private function wa_failover_url( $url, $default_base ) {
+		$options = $this->options();
+
+		if ( empty( $options['wa_api_base'] ) ) {
+			return null;
+		}
+
+		$custom = rtrim( $options['wa_api_base'], '/' );
+		if ( $custom === $default_base || 0 !== strpos( $url, $custom ) ) {
+			return null;
+		}
+
+		return $default_base . substr( $url, strlen( $custom ) );
+	}
+
+	/**
+	 * POST به درگاه واتساپ با Failover روی آدرس مستقیم درگاه در خطای شبکه
+	 * (cURL error 28 و...) — تا وقتی رله پاسخ ندهد، پیام‌ها از دست نروند.
+	 *
+	 * @param string $url          آدرس درخواست.
+	 * @param array  $args         آرگومان‌های wp_remote_post.
+	 * @param string $source       نام درگاه برای متن خطا.
+	 * @param string $default_base آدرس پایهٔ پیش‌فرض درگاه.
+	 * @return array|WP_Error
+	 */
+	private function wa_post( $url, $args, $source, $default_base ) {
+		$args['timeout'] = $this->timeout();
+
+		$result = $this->wa_check_response( wp_remote_post( $url, $args ), $source );
+
+		if ( $this->is_network_error( $result ) ) {
+			$alt = $this->wa_failover_url( $url, $default_base );
+			if ( $alt ) {
+				bei()->logger()->log(
+					'whatsapp',
+					'failover',
+					'scheduled',
+					'',
+					array( 'alt' => wp_parse_url( $alt, PHP_URL_HOST ) )
+				);
+				$alt_result = $this->wa_check_response( wp_remote_post( $alt, $args ), $source );
+				if ( ! $this->is_network_error( $alt_result ) ) {
+					return $alt_result;
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	/**
@@ -838,10 +1000,28 @@ final class Bei_Messenger {
 			$this->wa_base( self::CALLMEBOT_API ) . '/whatsapp.php'
 		);
 
-		$response = wp_remote_get( $url, array( 'timeout' => self::TIMEOUT ) );
+		$response = wp_remote_get( $url, array( 'timeout' => $this->timeout() ) );
+
+		// در خطای شبکه (cURL error 28 و...) یک بار از آدرس مستقیم درگاه تلاش می‌شود.
+		if ( is_wp_error( $response ) && $this->is_network_error( $response ) ) {
+			$alt = $this->wa_failover_url( $url, self::CALLMEBOT_API );
+			if ( $alt ) {
+				bei()->logger()->log(
+					'whatsapp',
+					'failover',
+					'scheduled',
+					'',
+					array( 'alt' => wp_parse_url( $alt, PHP_URL_HOST ) )
+				);
+				$alt_response = wp_remote_get( $alt, array( 'timeout' => $this->timeout() ) );
+				if ( ! is_wp_error( $alt_response ) ) {
+					$response = $alt_response;
+				}
+			}
+		}
 
 		if ( is_wp_error( $response ) ) {
-			return $response;
+			return new WP_Error( $response->get_error_code(), $this->friendly_error( $response->get_error_message() ) );
 		}
 
 		$code = wp_remote_retrieve_response_code( $response );
@@ -908,16 +1088,15 @@ final class Bei_Messenger {
 			. '/waInstance' . $options['wa_instance']
 			. '/sendMessage/' . $options['wa_token'];
 
-		$response = wp_remote_post(
+		$result = $this->wa_post(
 			$url,
 			array(
-				'timeout' => self::TIMEOUT,
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
-			)
+			),
+			__( 'واتساپ (Green API)', 'bale-eitaa-notifier' ),
+			self::GREEN_API
 		);
-
-		$result = $this->wa_check_response( $response, __( 'واتساپ (Green API)', 'bale-eitaa-notifier' ) );
 
 		if ( ! is_wp_error( $result ) && empty( $result['idMessage'] ) ) {
 			return new WP_Error( 'bei_api', __( 'پاسخ موفق ولی بدون idMessage از Green API — وضعیت نمونه/شماره را در پنل گرین بررسی کنید.', 'bale-eitaa-notifier' ) );
@@ -958,15 +1137,14 @@ final class Bei_Messenger {
 			. '/' . $options['wa_instance']
 			. '/messages/chat';
 
-		$response = wp_remote_post(
+		$result = $this->wa_post(
 			$url,
 			array(
-				'timeout' => self::TIMEOUT,
-				'body'    => $payload,
-			)
+				'body' => $payload,
+			),
+			__( 'واتساپ (Ultramsg)', 'bale-eitaa-notifier' ),
+			self::ULTRAMSG_API
 		);
-
-		$result = $this->wa_check_response( $response, __( 'واتساپ (Ultramsg)', 'bale-eitaa-notifier' ) );
 
 		// Ultramsg ممکن است HTTP 200 بدهد ولی ارسال واقعاً ناموفق باشد — فیلد sent بررسی می‌شود.
 		if ( ! is_wp_error( $result ) ) {
@@ -1017,19 +1195,18 @@ final class Bei_Messenger {
 			. '/' . $options['wa_instance']
 			. '/messages';
 
-		$response = wp_remote_post(
+		$result = $this->wa_post(
 			$url,
 			array(
-				'timeout' => self::TIMEOUT,
 				'headers' => array(
 					'Content-Type'  => 'application/json',
 					'Authorization' => 'Bearer ' . $options['wa_token'],
 				),
 				'body' => wp_json_encode( $payload, JSON_UNESCAPED_UNICODE ),
-			)
+			),
+			__( 'واتساپ (Meta)', 'bale-eitaa-notifier' ),
+			self::META_API
 		);
-
-		$result = $this->wa_check_response( $response, __( 'واتساپ (Meta)', 'bale-eitaa-notifier' ) );
 
 		if ( ! is_wp_error( $result ) && empty( $result['messages'] ) ) {
 			return new WP_Error( 'bei_api', __( 'پاسخ موفق ولی بدون messages از Meta — وضعیت قالب پیام و شماره را بررسی کنید.', 'bale-eitaa-notifier' ) );
@@ -1049,7 +1226,8 @@ final class Bei_Messenger {
 	 */
 	private function wa_check_response( $response, $source ) {
 		if ( is_wp_error( $response ) ) {
-			return $response;
+			// خطای لایهٔ انتقال (cURL) هم راهنمای فارسی می‌گیرد.
+			return new WP_Error( $response->get_error_code(), $this->friendly_error( $response->get_error_message() ) );
 		}
 
 		$code = wp_remote_retrieve_response_code( $response );
@@ -1092,7 +1270,8 @@ final class Bei_Messenger {
 	 */
 	private function check_response( $response, $source ) {
 		if ( is_wp_error( $response ) ) {
-			return $response;
+			// خطای لایهٔ انتقال (cURL) هم راهنمای فارسی می‌گیرد.
+			return new WP_Error( $response->get_error_code(), $this->friendly_error( $response->get_error_message() ) );
 		}
 
 		$code = wp_remote_retrieve_response_code( $response );
@@ -1128,6 +1307,14 @@ final class Bei_Messenger {
 			'chat not found'              => __( 'گفتگو پیدا نشد — ربات باید عضو گفتگو باشد (در کانال/گروه حتماً ادمین باشد) و chat_id درست باشد.', 'bale-eitaa-notifier' ),
 			'not enough rights'           => __( 'ربات دسترسی کافی ندارد — ربات را «ادمین» گفتگو کنید.', 'bale-eitaa-notifier' ),
 			'unauthorized'                => __( 'توکن ربات نامعتبر است — توکن را دوباره از BotFather بگیرید.', 'bale-eitaa-notifier' ),
+
+			// خطاهای شبکه (سرور داخل ایران / فیلترینگ / رله):
+			'cURL error 28'      => __( 'سرور سایت نتوانست در مهلت مقرر پاسخی از پیام‌رسان/رله بگیرد. از دکمه «🛰️ بررسی اتصال به رله از سرور» در کارت تست اتصال استفاده کنید — اگر رله از سرور در دسترس نیست (ورکر از بیرون سالم باشد کافی نیست)، آدرس رله یا پراکسی را اصلاح کنید؛ در غیر این صورت مقدار «مهلت کلی هر درخواست» را افزایش دهید.', 'bale-eitaa-notifier' ),
+			'timed out'          => __( 'مهلت درخواست به پایان رسید — پاسخ پیام‌رسان/رله نرسید. مسیر شبکه (رله/پراکسی) را با دکمه «بررسی اتصال به رله از سرور» تست کنید.', 'bale-eitaa-notifier' ),
+			'could not resolve'  => __( 'سرور نتوانست نام دامنه را به IP تبدیل کند (خطای DNS) — تنظیمات DNS سرور یا آدرس رله را بررسی کنید.', 'bale-eitaa-notifier' ),
+			'connection refused' => __( 'مقصد اتصال را رد کرد (پورت بسته یا سرویس خاموش) — آدرس و پورت رله/پراکسی را بررسی کنید.', 'bale-eitaa-notifier' ),
+			'connection reset'   => __( 'اتصال وسط کار قطع شد — معمولاً فیلترینگ یا پراکسی ناپایدار؛ رله/پراکسی دیگری امتحان کنید.', 'bale-eitaa-notifier' ),
+			'empty reply'        => __( 'سرور بدون هیچ پاسخی اتصال را بست — سلامت رله را بررسی کنید (افزونه خودکار مسیر مستقیم را هم امتحان می‌کند).', 'bale-eitaa-notifier' ),
 		);
 
 		foreach ( $map as $needle => $hint ) {

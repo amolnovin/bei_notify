@@ -48,6 +48,7 @@ final class Bei_Settings {
 			'tg_chat_id'       => '',
 			'tg_bot_username'  => '',
 			'tg_api_base'      => '',
+			'tg_api_base_alt'  => '',
 			'tg_relay_key'     => '',
 			'tg_enabled'       => 1,
 
@@ -71,6 +72,10 @@ final class Bei_Settings {
 			// عیب‌یابی شبکه (خطای cURL error 28).
 			'tg_force_ipv4'      => 0,
 			'tg_connect_timeout' => 0,
+
+			// مهلت کلی درخواست‌های HTTP پیام‌رسان‌ها (ثانیه) — مقابله با
+			// افزونه‌ها/میوپلاگین‌هایی که مهلت وردپرس را به ۱۰ ثانیه محدود می‌کنند.
+			'bei_http_timeout' => 30,
 
 			// پل ایمیل.
 			'email_bridge'         => 0,
@@ -138,10 +143,12 @@ final class Bei_Settings {
 			'tg_token'      => 'BEI_TG_TOKEN',
 			'tg_chat_id'    => 'BEI_TG_CHAT_ID',
 			'tg_api_base'   => 'BEI_TG_API_BASE',
+			'tg_api_base_alt' => 'BEI_TG_API_BASE_ALT',
 			'tg_relay_key'  => 'BEI_TG_RELAY_KEY',
 			'wa_instance'   => 'BEI_WA_INSTANCE',
 			'wa_token'      => 'BEI_WA_TOKEN',
 			'wa_chat_id'    => 'BEI_WA_CHAT_ID',
+			'bei_http_timeout' => 'BEI_HTTP_TIMEOUT',
 		);
 
 		foreach ( $constants as $key => $constant ) {
@@ -221,6 +228,7 @@ final class Bei_Settings {
 		$clean['tg_chat_id']    = isset( $input['tg_chat_id'] ) ? sanitize_textarea_field( wp_unslash( $input['tg_chat_id'] ) ) : '';
 		$clean['tg_bot_username'] = isset( $input['tg_bot_username'] ) ? sanitize_text_field( wp_unslash( $input['tg_bot_username'] ) ) : '';
 		$clean['tg_api_base']   = isset( $input['tg_api_base'] ) ? esc_url_raw( wp_unslash( $input['tg_api_base'] ) ) : '';
+		$clean['tg_api_base_alt'] = isset( $input['tg_api_base_alt'] ) ? esc_url_raw( wp_unslash( $input['tg_api_base_alt'] ) ) : '';
 		$clean['tg_relay_key']  = isset( $input['tg_relay_key'] ) ? sanitize_text_field( wp_unslash( $input['tg_relay_key'] ) ) : '';
 		$clean['tg_enabled']    = empty( $input['tg_enabled'] ) ? 0 : 1;
 
@@ -256,6 +264,7 @@ final class Bei_Settings {
 		// عیب‌یابی شبکه.
 		$clean['tg_force_ipv4'] = empty( $input['tg_force_ipv4'] ) ? 0 : 1;
 		$clean['tg_connect_timeout'] = isset( $input['tg_connect_timeout'] ) ? min( 120, absint( $input['tg_connect_timeout'] ) ) : 0;
+		$clean['bei_http_timeout']   = isset( $input['bei_http_timeout'] ) ? min( 300, max( 10, absint( $input['bei_http_timeout'] ) ) ) : 30;
 
 		// پل ایمیل.
 		$clean['email_bridge'] = empty( $input['email_bridge'] ) ? 0 : 1;
@@ -561,8 +570,15 @@ final class Bei_Settings {
 									<input id="bei-tg-base" class="bei-input bei-input--ltr" type="text" dir="ltr"
 										name="bei_options[tg_api_base]" value="<?php echo esc_attr( $options['tg_api_base'] ); ?>"
 										placeholder="https://api.telegram.org" spellcheck="false" />
-									<p class="bei-hint"><?php esc_html_e( 'خالی = api.telegram.org. برای دور زدن فیلترینگ می‌توانید آدرس یک سرور رله (Reverse Proxy) که روی سرور خارج از ایران دارید را وارد کنید — مسیرها باید همانند api.telegram.org حفظ شوند.', 'bale-eitaa-notifier' ); ?></p>
-								</div>
+								<p class="bei-hint"><?php esc_html_e( 'خالی = api.telegram.org. برای دور زدن فیلترینگ می‌توانید آدرس یک سرور رله (Reverse Proxy) که روی سرور خارج از ایران دارید را وارد کنید — مسیرها باید همانند api.telegram.org حفظ شوند.', 'bale-eitaa-notifier' ); ?></p>
+							</div>
+							<div class="bei-field">
+								<label class="bei-label" for="bei-tg-base-alt"><?php esc_html_e( 'رلهٔ دوم/پشتیبان تلگرام (اختیاری)', 'bale-eitaa-notifier' ); ?></label>
+								<input id="bei-tg-base-alt" class="bei-input bei-input--ltr" type="text" dir="ltr"
+									name="bei_options[tg_api_base_alt]" value="<?php echo esc_attr( $options['tg_api_base_alt'] ); ?>"
+									placeholder="https://tg-relay-2.example.com" spellcheck="false" />
+								<p class="bei-hint"><?php esc_html_e( 'در خطاهای شبکه (cURL error 28) افزونه خودکار اول از این آدرس و بعد از مسیر مستقیم تلاش می‌کند — برای وقتی که رلهٔ اصلی پاسخ ندهد.', 'bale-eitaa-notifier' ); ?></p>
+							</div>
 								<div class="bei-field">
 									<label class="bei-label" for="bei-tg-key"><?php esc_html_e( 'کلید امنیتی رله (اختیاری)', 'bale-eitaa-notifier' ); ?></label>
 									<input id="bei-tg-key" class="bei-input bei-input--ltr" type="text" dir="ltr"
@@ -711,9 +727,13 @@ final class Bei_Settings {
 								<div class="bei-field">
 									<span class="bei-label"><?php esc_html_e( 'عیب‌یابی شبکه (برای خطای cURL error 28 — سرور به api.* وصل نمی‌شود):', 'bale-eitaa-notifier' ); ?></span>
 									<?php $this->render_switch( 'bei_options[tg_force_ipv4]', '1', ! empty( $options['tg_force_ipv4'] ), __( 'فورس IPv4', 'bale-eitaa-notifier' ) ); ?>
-									<p class="bei-hint"><?php esc_html_e( 'مهلت برقراری اتصال (ثانیه — خالی = پیش‌فرض ۱۰):', 'bale-eitaa-notifier' ); ?></p>
+									<p class="bei-hint"><?php esc_html_e( 'مهلت برقراری اتصال (ثانیه — خالی = ۱۵):', 'bale-eitaa-notifier' ); ?></p>
 									<input id="bei-connect-timeout" class="bei-input bei-input--ltr bei-input--short" type="text" dir="ltr"
 										name="bei_options[tg_connect_timeout]" value="<?php echo esc_attr( $options['tg_connect_timeout'] ? $options['tg_connect_timeout'] : '' ); ?>"
+										placeholder="30" spellcheck="false" />
+									<p class="bei-hint"><?php esc_html_e( 'مهلت کلی هر درخواست (ثانیه — پیش‌فرض ۳۰). اگر خطای «Operation timed out after 10000 milliseconds» می‌بینید یعنی افزونه/میوپلاگین دیگری مهلت را به ۱۰ ثانیه محدود کرده — این تنظیم آن را برای درخواست‌های پیام‌رسان‌ها بازنویسی می‌کند.', 'bale-eitaa-notifier' ); ?></p>
+									<input id="bei-http-timeout" class="bei-input bei-input--ltr bei-input--short" type="text" dir="ltr"
+										name="bei_options[bei_http_timeout]" value="<?php echo esc_attr( $options['bei_http_timeout'] ? $options['bei_http_timeout'] : '' ); ?>"
 										placeholder="30" spellcheck="false" />
 									<p class="bei-hint"><?php esc_html_e( 'نکته: این تنظیمات فقط روی درخواست‌های دامنه‌های تیک‌خورده بالا اعمال می‌شوند. اگر سرور به خود api.* دسترسی ندارد، راه قطعی «رله» است (فایل callmebot-relay-worker.js آماده در پروژه).', 'bale-eitaa-notifier' ); ?></p>
 								</div>
@@ -878,6 +898,7 @@ final class Bei_Settings {
 										<button class="button bei-btn bei-btn-block" type="submit" name="target" value="whatsapp">💬 <?php esc_html_e( 'تست واتساپ', 'bale-eitaa-notifier' ); ?></button>
 									<?php endif; ?>
 									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="proxy">🌐 <?php esc_html_e( 'تست پراکسی', 'bale-eitaa-notifier' ); ?></button>
+								<button class="button bei-btn bei-btn-block" type="submit" name="target" value="relay">🛰️ <?php esc_html_e( 'بررسی اتصال به رله از سرور', 'bale-eitaa-notifier' ); ?></button>
 									<button class="button bei-btn bei-btn-block" type="submit" name="target" value="email">📧 <?php esc_html_e( 'تست پل ایمیل', 'bale-eitaa-notifier' ); ?></button>
 								</div>
 							</form>
@@ -960,6 +981,11 @@ final class Bei_Settings {
 			case 'proxy':
 				// تست پراکسی مستقل — بدون نیاز به توکن پیام‌رسان.
 				set_transient( 'bei_test_result', $this->run_proxy_test(), 60 );
+				wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'admin.php' ) ) );
+				exit;
+			case 'relay':
+				// بررسی دسترسی سرور به رله و API مستقیم — بدون نیاز به توکن.
+				set_transient( 'bei_test_result', $this->run_relay_test(), 60 );
 				wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'admin.php' ) ) );
 				exit;
 			case 'email':
@@ -1066,6 +1092,121 @@ final class Bei_Settings {
 				$hosts[ $target ]
 			),
 		);
+	}
+
+	/**
+	 * بررسی دسترسی «از دید سرور سایت» به API مستقیم پیام‌رسان‌ها و رله‌های
+	 * تنظیم‌شده — برای تشخیص خطای cURL error 28 (سلامت ورکر از بیرون ثابت نمی‌کند
+	 * که سرور سایت هم به آن می‌رسد).
+	 *
+	 * @return array ['ok', پیام] یا ['error', پیام]
+	 */
+	private function run_relay_test() {
+		$options = self::get_options();
+		$lines   = array();
+
+		// مقاصد مستقیم (فقط پیام‌رسان‌های فعال).
+		$direct = array();
+		if ( ! empty( $options['tg_enabled'] ) ) {
+			$direct[ __( 'تلگرام مستقیم', 'bale-eitaa-notifier' ) ] = 'https://api.telegram.org/';
+		}
+		if ( ! empty( $options['bale_enabled'] ) ) {
+			$direct[ __( 'بله مستقیم', 'bale-eitaa-notifier' ) ] = 'https://tapi.bale.ai/';
+		}
+		if ( ! empty( $options['eitaa_enabled'] ) ) {
+			$direct[ __( 'ایتا مستقیم', 'bale-eitaa-notifier' ) ] = 'https://eitaayar.ir/';
+		}
+		if ( ! empty( $options['wa_enabled'] ) ) {
+			$direct[ __( 'واتساپ (CallMeBot) مستقیم', 'bale-eitaa-notifier' ) ] = 'https://api.callmebot.com/';
+		}
+
+		// رله‌های تنظیم‌شده.
+		$relays = array();
+		if ( ! empty( $options['tg_api_base'] ) ) {
+			$relays[ __( 'رله تلگرام', 'bale-eitaa-notifier' ) ] = rtrim( $options['tg_api_base'], '/' ) . '/';
+		}
+		if ( ! empty( $options['tg_api_base_alt'] ) ) {
+			$relays[ __( 'رله دوم تلگرام', 'bale-eitaa-notifier' ) ] = rtrim( $options['tg_api_base_alt'], '/' ) . '/';
+		}
+		if ( ! empty( $options['wa_api_base'] ) ) {
+			$relays[ __( 'رله واتساپ', 'bale-eitaa-notifier' ) ] = rtrim( $options['wa_api_base'], '/' ) . '/';
+		}
+
+		if ( empty( $direct ) && empty( $relays ) ) {
+			return array( 'error', __( 'هیچ پیام‌رسانی فعال نیست و رله‌ای تنظیم نشده است.', 'bale-eitaa-notifier' ) );
+		}
+
+		$timeout = min( 8, max( 3, (int) $options['bei_http_timeout'] / 2 ) );
+
+		$check = function ( $url ) use ( $timeout ) {
+			$start    = microtime( true );
+			$response = wp_remote_get(
+				$url,
+				array(
+					'timeout'     => $timeout,
+					'redirection' => 0,
+				)
+			);
+			$elapsed  = round( ( microtime( true ) - $start ) * 1000 );
+
+			if ( is_wp_error( $response ) ) {
+				return sprintf( '❌ %s', $response->get_error_message() );
+			}
+
+			$code = wp_remote_retrieve_response_code( $response );
+
+			return sprintf( '✔ پاسخ %d در %d میلی‌ثانیه', $code, $elapsed );
+		};
+
+		$direct_results = array();
+		foreach ( $direct as $label => $url ) {
+			$direct_results[] = $check( $url );
+			$lines[]          = sprintf( '%s: %s', $label, end( $direct_results ) );
+		}
+
+		$relay_results = array();
+		foreach ( $relays as $label => $url ) {
+			$relay_results[] = $check( $url );
+			$lines[]         = sprintf( '%s (%s): %s', $label, wp_parse_url( $url, PHP_URL_HOST ), end( $relay_results ) );
+		}
+
+		if ( ! empty( $options['tg_proxy_enabled'] ) ) {
+			$lines[] = __( '⚠ پراکسی فعال است — نتیجه‌های بالا از مسیر پراکسی اندازه‌گیری شده‌اند.', 'bale-eitaa-notifier' );
+		}
+
+		$status = 'ok';
+		$hint   = '';
+
+		$all_direct_failed = ! empty( $direct_results );
+		foreach ( $direct_results as $r ) {
+			if ( false === stripos( $r, '❌' ) ) {
+				$all_direct_failed = false;
+			}
+		}
+		$all_relay_failed = ! empty( $relay_results );
+		foreach ( $relay_results as $r ) {
+			if ( false === stripos( $r, '❌' ) ) {
+				$all_relay_failed = false;
+			}
+		}
+
+		if ( $all_relay_failed ) {
+			// همه رله‌ها از دید سرور در دسترس نیستند — مشکل اصلی همین است.
+			$status = 'error';
+			$hint   = __( 'هیچ‌کدام از رله‌ها از «سرور سایت» در دسترس نیست — ورکر ممکن است از بیرون سالم باشد ولی سرور شما به آن نرسد (فیلترینگ/مسیر پراکسی/آدرس اشتباه). آدرس رله را اصلاح کنید یا پراکسی تنظیم کنید.', 'bale-eitaa-notifier' );
+		} elseif ( $all_direct_failed && empty( $relay_results ) ) {
+			$status = 'error';
+			$hint   = __( 'سرور به هیچ API پیام‌رسانی دسترسی ندارد — برای سرور داخل ایران، «رله» یا «پراکسی» لازم است.', 'bale-eitaa-notifier' );
+		} elseif ( false !== stripos( implode( ' ', $lines ), '❌' ) ) {
+			$hint = __( 'برخی مقاصد از سرور در دسترس نیستند — برای همان پیام‌رسان از رله یا پراکسی استفاده کنید.', 'bale-eitaa-notifier' );
+		}
+
+		$message = implode( ' — ', $lines );
+		if ( $hint ) {
+			$message .= ' — 💡 ' . $hint;
+		}
+
+		return array( 'ok' === $status ? 'ok' : 'error', $message );
 	}
 
 	/**

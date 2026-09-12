@@ -41,6 +41,34 @@ final class Bei_Proxy {
 	 */
 	public function __construct() {
 		add_action( 'http_api_curl', array( $this, 'apply' ), 10, 3 );
+
+		// دفاع در برابر افزونه‌هایی که مهلت HTTP وردپرس را سراسری کم می‌کنند
+		// (خطای «Operation timed out after 10000 milliseconds»): مهلت درخواست‌های
+		// دامنه‌های پیام‌رسان همیشه از تنظیم «مهلت کلی هر درخواست» کمتر نمی‌شود.
+		add_filter( 'http_request_args', array( $this, 'enforce_timeout' ), 9999, 2 );
+	}
+
+	/**
+	 * بازنویسی مهلت کلی درخواست‌های پیام‌رسان‌ها (اولویت ۹۹۹۹ — آخر از همه).
+	 *
+	 * @param array  $args آرگومان‌های درخواست.
+	 * @param string $url  آدرس درخواست.
+	 * @return array
+	 */
+	public function enforce_timeout( $args, $url ) {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! $host || ! $this->is_messenger_host( $host, Bei_Settings::get_options() ) ) {
+			return $args;
+		}
+
+		$options = Bei_Settings::get_options();
+		$floor   = min( 300, max( 10, (int) $options['bei_http_timeout'] ) );
+
+		if ( isset( $args['timeout'] ) && is_numeric( $args['timeout'] ) && (float) $args['timeout'] < $floor ) {
+			$args['timeout'] = $floor;
+		}
+
+		return $args;
 	}
 
 	/**
@@ -68,9 +96,24 @@ final class Bei_Proxy {
 			curl_setopt( $handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4 );
 		}
 
-		// عیب‌یابی شبکه: افزایش مهلت برقراری اتصال (پیش‌فرض وردپرس ۱۰ ثانیه است).
-		if ( ! empty( $options['tg_connect_timeout'] ) && defined( 'CURLOPT_CONNECTTIMEOUT' ) ) {
-			curl_setopt( $handle, CURLOPT_CONNECTTIMEOUT, max( 10, (int) $options['tg_connect_timeout'] ) );
+		// عیب‌یابی شبکه: مهلت برقراری اتصال (پیش‌فرض وردپرس ۱۰ ثانیه است —
+		// برای سرورهای داخل ایران همین ۱۰ ثانیه منشأ خطای cURL error 28 است).
+		if ( defined( 'CURLOPT_CONNECTTIMEOUT' ) ) {
+			$connect = ! empty( $options['tg_connect_timeout'] )
+				? max( 10, (int) $options['tg_connect_timeout'] )
+				: 15;
+			curl_setopt( $handle, CURLOPT_CONNECTTIMEOUT, $connect );
+		}
+
+		// بازنویسی مهلت کلی روی خود هندل cURL (آخرین لحظه، بعد از کتابخانه Requests):
+		// اگر افزونه/میوپلاگین دیگری مهلت را به ۱۰ ثانیه محدود کرده باشد، اینجا
+		// برای درخواست‌های پیام‌رسان‌ها به «مهلت کلی هر درخواست» برمی‌گردد.
+		// (درخواست‌هایی که خودشان مهلت بیشتری خواسته‌اند — مثل آپلود فایل — دست نمی‌خورند.)
+		if ( defined( 'CURLOPT_TIMEOUT' ) && isset( $parsed_args['timeout'] ) && is_numeric( $parsed_args['timeout'] ) ) {
+			$floor = min( 300, max( 10, (int) $options['bei_http_timeout'] ) );
+			if ( (float) $parsed_args['timeout'] >= 1 && (float) $parsed_args['timeout'] < $floor ) {
+				curl_setopt( $handle, CURLOPT_TIMEOUT, $floor );
+			}
 		}
 
 		if ( empty( $options['tg_proxy_enabled'] ) || empty( $options['tg_proxy_host'] ) ) {
@@ -117,7 +160,7 @@ final class Bei_Proxy {
 		}
 
 		// اگر آدرس API جایگزین (رله) تنظیم شده باشد، دامنه آن هم پذیرفته می‌شود.
-		foreach ( array( 'tg_api_base' => 'tg_enabled', 'wa_api_base' => 'wa_enabled' ) as $base_key => $enabled_key ) {
+		foreach ( array( 'tg_api_base' => 'tg_enabled', 'tg_api_base_alt' => 'tg_enabled', 'wa_api_base' => 'wa_enabled' ) as $base_key => $enabled_key ) {
 			if ( empty( $options[ $base_key ] ) ) {
 				continue;
 			}

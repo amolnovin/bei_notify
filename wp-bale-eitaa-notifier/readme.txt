@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.1.6
+Stable tag: 3.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,12 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.1.7 =
+* رفع خطای «cURL error 28: Operation timed out after 10000 milliseconds» در تلگرام/واتساپ: بازنویسی مهلت اتصال و مهلت کلی درخواست‌های پیام‌رسان‌ها (مقابله با محدودیت ۱۰ ثانیه‌ای کتابخانه Requests و افزونه‌های دیگر) + تنظیم «مهلت کلی هر درخواست»
+* Failover خودکار در خطاهای شبکه: رله ↔ مسیر مستقیم + رلهٔ دوم/پشتیبان تلگرام (tg_api_base_alt)
+* دکمهٔ «بررسی اتصال به رله از سرور» برای اندازه‌گیری دسترسی سرور به رله و API مستقیم
+* راهنمای فارسی خطاهای شبکه (cURL 28، DNS، Connection refused و...) در پیام‌های خطا
 
 = 3.1.6 =
 * بستهٔ «نسخهٔ آزاد» (ZIP بدون کیت لایسنس): افزونه بدون نیاز به لایسنس و بدون بروزرسانی خودکار اجرا می‌شود؛ boot بدون کیت خطای fatal نمی‌دهد و لینک «لایسنس» در نسخهٔ آزاد نمایش داده نمی‌شود

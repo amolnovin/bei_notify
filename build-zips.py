@@ -19,7 +19,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'wp-bale-eitaa-notifier')
 MAIN_FILE = 'wp-bale-eitaa-notifier.php'
 KIT_DIR = 'wplm-client-kit'
-VERSION = '3.1.6'
+VERSION = '3.1.7'
 
 # ---------------------------------------------------------------- توابع کمکی
 
