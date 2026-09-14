@@ -31,6 +31,14 @@ export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 
+		// وضعیت سلامتی — برای تست از مرورگر و دکمهٔ «بررسی اتصال به رله» افزونه.
+		if (url.pathname === '/' || url.pathname === '/health') {
+			return new Response(JSON.stringify({ ok: true, service: 'bei-callmebot-relay', time: new Date().toISOString() }), {
+				status: 200,
+				headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+			});
+		}
+
 		// فقط مسیرهای API متنی CallMeBot مجاز هستند
 		if (url.pathname !== '/whatsapp.php') {
 			return new Response('Not Found', { status: 404 });
@@ -74,10 +82,16 @@ export default {
 			clearTimeout(timer);
 		}
 
+		const out = new Headers(response.headers);
+		if (!out.has('cache-control')) {
+			out.set('cache-control', 'no-store');
+		}
+		out.set('x-bei-relay', 'callmebot-relay');
+
 		return new Response(response.body, {
 			status: response.status,
 			statusText: response.statusText,
-			headers: response.headers,
+			headers: out,
 		});
 	},
 };
