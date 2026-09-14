@@ -650,6 +650,7 @@ final class Bei_Settings {
 									<strong><?php esc_html_e( '🆓 مسیر ۱ — CallMeBot (رایگان، ساده‌ترین):', 'bale-eitaa-notifier' ); ?></strong><br />
 									<?php esc_html_e( '۱) شماره ربات CallMeBot را در واتساپ ذخیره کنید و پیام «I allow callmebot to send me messages» بفرستید — apikey رایگان می‌گیرید (راهنما: callmebot.com/blog/free-api-whatsapp-messages).', 'bale-eitaa-notifier' ); ?><br />
 									<?php esc_html_e( '۲) apikey را در «توکن درگاه» و شماره خودتان را (با کد کشور) در «شماره مقصد» بگذارید — تمام! پیام‌ها به واتساپ خودتان می‌رسد.', 'bale-eitaa-notifier' ); ?><br />
+								<?php esc_html_e( '۳) محدودیت رایگان: افزونه خودکار فاصلهٔ ۱۵ ثانیه بین ارسال‌ها و سقف ۱۵ پیام در ساعت را رعایت می‌کند — تست مکرر نزنید؛ در برابر «Too many requests» کالبوت چند ساعت ارسال را قفل می‌کند.', 'bale-eitaa-notifier' ); ?><br />
 									<strong><?php esc_html_e( '🆓 مسیر ۲ — شماره تست رایگان متا (رسمی):', 'bale-eitaa-notifier' ); ?></strong><br />
 									<?php esc_html_e( '۳) در business.facebook.com یک اکانت بیزینس رایگان بسازید و از بخش WhatsApp → API Setup «شماره تست» رایگان بگیرید (Phone Number ID + توکن).', 'bale-eitaa-notifier' ); ?><br />
 									<?php esc_html_e( '۴) تا ۵ شماره را در بخش To (آدرس گیرنده) تأیید کنید — ارسال به این شماره‌ها بدون قالب و بدون هزینه است.', 'bale-eitaa-notifier' ); ?><br />

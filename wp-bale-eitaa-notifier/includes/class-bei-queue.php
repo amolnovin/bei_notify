@@ -87,7 +87,8 @@ final class Bei_Queue {
 	 *
 	 * نکته (باگ رفع‌شده): Retry فقط برای کانال‌های «ناموفق» زمان‌بندی می‌شود —
 	 * کانال‌هایی که در تلاش اول موفق بودند دوباره پیام نمی‌گیرند. خطاهای
-	 * پیکربندی (توکن/شناسه تنظیم نشده) هم دائمی‌اند و Retry نمی‌شوند.
+	 * پیکربندی (توکن/شناسه تنظیم نشده) و «محدودیت سرویس» (bei_rate_limit —
+	 * مثل Too many requests کالبوت) هم دائمی‌اند و Retry نمی‌شوند.
 	 *
 	 * @param string $text    متن پیام.
 	 * @param array  $targets کانال‌های مقصد.
@@ -111,8 +112,9 @@ final class Bei_Queue {
 					array( 'attempt' => $attempt + 1, 'error' => $result->get_error_message() )
 				);
 
-				if ( 'bei_config' === $result->get_error_code() ) {
-					// خطای پیکربندی دائمی است — Retry نمی‌شود.
+				if ( in_array( $result->get_error_code(), array( 'bei_config', 'bei_rate_limit' ), true ) ) {
+					// خطای پیکربندی یا محدودیت سرویس (Rate Limit) دائمی است —
+					// تلاش مجدد فوری فقط سرویس رایگان را بدتر محدود می‌کند.
 					$permanent[] = $channel;
 				} else {
 					$retryable[ $channel ] = $result->get_error_message();

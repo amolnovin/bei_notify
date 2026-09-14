@@ -4,7 +4,7 @@ Tags: bale, eitaa, telegram, whatsapp, callmebot, messenger, notification, forms
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 3.2.0
+Stable tag: 3.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 سه روش: ۱) تابع مستقیم `bei_notify( $text, $targets )` با گارد function_exists. ۲) هوک استاندارد `do_action( 'bei_send', $text, $targets )` — بدون هیچ وابستگی؛ اگر افزونه فعال نباشد فراخوانی بی‌اثر است. ۳) REST API در آدرس wp-json/bei/v1/notify. نمونه‌های آماده برای ۲۰+ افزونه معروف در فایل examples/integration-examples.php است.
 
 == Changelog ==
+
+= 3.2.1 =
+* رفع «0 bytes / timeout» واتساپ: گلوگاه خودکار CallMeBot (فاصلهٔ ۱۵ ثانیه + سقف ۱۵ پیام در ساعت) و تشخیص «Too many requests» (503/429) به‌عنوان خطای دائمی بدون طوفان Retry
+* رفع باگ multi_send: حفظ کد خطای اصلی برای تشخیص درست دائمی/قابل تکرار در صف
 
 = 3.2.0 =
 * رفع مشکل «اعلان وضعیت سفارش نمیرسد ولی تست میرسد»: لاگ کامل پیامهای مشتری (sent/failed/skipped با دلیل) + رفع هدایت اشتباه صف به بله/ایتا + لاگ «queued» برای ورود به صف

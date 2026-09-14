@@ -73,6 +73,24 @@ final class Bei_Messenger {
 	const UPLOAD_TIMEOUT = 120;
 
 	/**
+	 * محدودیت‌های سرویس رایگان CallMeBot.
+	 *
+	 * نکته: CallMeBot رایگان است و در برابر استفادهٔ زیاد با
+	 * «Too many requests» (HTTP 503) پاسخ می‌دهد یا درخواست‌ها را
+	 * بی‌پاسخ رها می‌کند (که در لاگ سرور «0 bytes / timeout» می‌شود).
+	 * این دو ثابت فاصلهٔ بین ارسال‌ها و سقف ساعتی را رعایت می‌کنند تا
+	 * سرویس محدود نشود. برای ارسال انبوه از Green API / Ultramsg استفاده کنید.
+	 */
+	const CALLMEBOT_MIN_INTERVAL = 15;  // حداقل فاصله بین دو ارسال (ثانیه)
+	const CALLMEBOT_MAX_PER_HOUR = 15;  // سقف پیام در ساعت (پلن رایگان)
+
+	/**
+	 * نام ترنزینت‌های گلوگاه (throttle) CallMeBot.
+	 */
+	const CMB_T_LAST  = 'bei_cmb_last_send';
+	const CMB_T_COUNT = 'bei_cmb_hour_count';
+
+	/**
 	 * خواندن تنظیمات (همراه با پیش‌فرض‌ها).
 	 *
 	 * @return array
@@ -205,18 +223,25 @@ final class Bei_Messenger {
 	private function multi_send( $chat_ids, $callback ) {
 		$last   = null;
 		$errors = array();
+		$codes  = array();
 
 		foreach ( $chat_ids as $chat_id ) {
 			$result = call_user_func( $callback, $chat_id );
 			if ( is_wp_error( $result ) ) {
 				$errors[] = $chat_id . ': ' . $result->get_error_message();
+				$codes[]  = $result->get_error_code();
 			} else {
 				$last = $result;
 			}
 		}
 
 		if ( null === $last && ! empty( $errors ) ) {
-			return new WP_Error( 'bei_multi', implode( ' | ', $errors ) );
+			// اگر همهٔ خطاها یک کد واحد داشتند (مثل bei_rate_limit یا bei_api)،
+			// همان کد حفظ می‌شود تا صف بتواند «دائمی» را از «قابل تکرار» تشخیص دهد.
+			$codes = array_unique( $codes );
+			$code  = ( 1 === count( $codes ) ) ? $codes[0] : 'bei_multi';
+
+			return new WP_Error( $code, implode( ' | ', $errors ) );
 		}
 
 		if ( ! empty( $errors ) && is_array( $last ) ) {
@@ -1037,12 +1062,59 @@ final class Bei_Messenger {
 	 * @param array  $args پارامترهای اضافی.
 	 * @return array|WP_Error
 	 */
+	/**
+	 * بررسی گلوگاه CallMeBot (قبل از هر ارسال واتساپ با این درگاه).
+	 *
+	 * @return WP_Error|null خطای bei_throttled یا null (مجاز است).
+	 */
+	private function callmebot_throttle_check() {
+		$last    = (int) get_transient( self::CMB_T_LAST );
+		$elapsed = $last ? ( time() - $last ) : self::CALLMEBOT_MIN_INTERVAL + 1;
+
+		if ( $last && $elapsed < self::CALLMEBOT_MIN_INTERVAL ) {
+			/* translators: %d: ثانیهٔ باقی‌مانده */
+			return new WP_Error(
+				'bei_throttled',
+				sprintf(
+					__( 'محدودیت سرویس رایگان CallMeBot: فاصلهٔ مجاز بین دو ارسال واتساپ رعایت نشد — حدود %d ثانیهٔ دیگر به‌صورت خودکار دوباره تلاش می‌شود.', 'bale-eitaa-notifier' ),
+					self::CALLMEBOT_MIN_INTERVAL - $elapsed
+				)
+			);
+		}
+
+		$hour_count = (int) get_transient( self::CMB_T_COUNT );
+		if ( $hour_count >= self::CALLMEBOT_MAX_PER_HOUR ) {
+			return new WP_Error(
+				'bei_throttled',
+				__( 'سقف ساعتی سرویس رایگان CallMeBot پر شد — ارسال واتساپ به‌طور خودکار یک ساعت دیگر ادامه پیدا می‌کند. برای ارسال انبوه از Green API یا Ultramsg استفاده کنید.', 'bale-eitaa-notifier' )
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * ثبت زمان/شمارش هر تلاش ارسال CallMeBot (برای گلوگاه).
+	 */
+	private function callmebot_throttle_tick() {
+		set_transient( self::CMB_T_LAST, time(), HOUR_IN_SECONDS );
+		$hour_count = (int) get_transient( self::CMB_T_COUNT );
+		set_transient( self::CMB_T_COUNT, $hour_count + 1, HOUR_IN_SECONDS );
+	}
+
 	public function send_wa_callmebot( $text, $args = array() ) {
 		$options = $this->options();
 
 		if ( empty( $options['wa_token'] ) || empty( $options['wa_chat_id'] ) ) {
 			return new WP_Error( 'bei_config', __( 'تنظیمات CallMeBot کامل نیست: شماره واتساپ و apikey لازم است.', 'bale-eitaa-notifier' ) );
 		}
+
+		// گلوگاه سرویس رایگان CallMeBot (فاصلهٔ بین ارسال‌ها + سقف ساعتی).
+		$throttle = $this->callmebot_throttle_check();
+		if ( is_wp_error( $throttle ) ) {
+			return $throttle;
+		}
+		$this->callmebot_throttle_tick();
 
 		$url = add_query_arg(
 			wp_parse_args(
@@ -1083,6 +1155,15 @@ final class Bei_Messenger {
 
 		$code = wp_remote_retrieve_response_code( $response );
 		$body = trim( wp_remote_retrieve_body( $response ) );
+
+		// محدودیت سرویس رایگان CallMeBot: «Too many requests» با HTTP 503/429.
+		// خطای دائمی — تلاش مجدد فوری فقط سرویس را بدتر محدود می‌کند.
+		if ( 503 === $code || 429 === $code || false !== stripos( $body, 'too many requests' ) ) {
+			return new WP_Error(
+				'bei_rate_limit',
+				__( 'سرویس رایگان CallMeBot به‌طور موقت ارسال را محدود کرده است («Too many requests») — برای چند ساعت تست/ارسال مکرر نکنید تا محدودیت پاک شود. برای ارسال انبوه از درگاه‌های Green API یا Ultramsg استفاده کنید.', 'bale-eitaa-notifier' )
+			);
+		}
 
 		if ( $code < 200 || $code >= 300 ) {
 			return new WP_Error(
@@ -1378,6 +1459,7 @@ final class Bei_Messenger {
 			'workers.dev'       => __( 'دامنهٔ *.workers.dev در شبکهٔ ایران در لایهٔ SNI فیلتر می‌شود (TCP وصل می‌شود ولی پاسخ هرگز نمی‌آید — مجازکردن در پنل هاست اثری ندارد) — در Cloudflare برای این ورکر یک Custom Domain روی دامنهٔ خودتان بسازید و آدرس رله را عوض کنید.', 'bale-eitaa-notifier' ),
 
 			// خطاهای شبکه (سرور داخل ایران / فیلترینگ / رله):
+			'too many requests'  => __( 'سرویس مقصد درخواست‌ها را موقتاً محدود کرده است (Rate Limit) — دفعات ارسال را کم کنید و کمی صبر کنید.', 'bale-eitaa-notifier' ),
 			'cURL error 28'      => __( 'سرور سایت نتوانست در مهلت مقرر پاسخی از پیام‌رسان/رله بگیرد. از دکمه «🛰️ بررسی اتصال به رله از سرور» در کارت تست اتصال استفاده کنید — اگر رله از سرور در دسترس نیست (ورکر از بیرون سالم باشد کافی نیست)، آدرس رله یا پراکسی را اصلاح کنید؛ در غیر این صورت مقدار «مهلت کلی هر درخواست» را افزایش دهید.', 'bale-eitaa-notifier' ),
 			'timed out'          => __( 'مهلت درخواست به پایان رسید — پاسخ پیام‌رسان/رله نرسید. مسیر شبکه (رله/پراکسی) را با دکمه «بررسی اتصال به رله از سرور» تست کنید.', 'bale-eitaa-notifier' ),
 			'could not resolve'  => __( 'سرور نتوانست نام دامنه را به IP تبدیل کند (خطای DNS) — تنظیمات DNS سرور یا آدرس رله را بررسی کنید.', 'bale-eitaa-notifier' ),
