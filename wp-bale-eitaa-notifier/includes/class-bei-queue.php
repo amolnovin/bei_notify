@@ -43,7 +43,11 @@ final class Bei_Queue {
 		// فقط کانال‌های «فعال‌شده» در تنظیمات ارسال می‌شوند.
 		$targets = array_values( array_intersect( (array) $targets, Bei_Settings::enabled_channels() ) );
 		if ( empty( $targets ) ) {
-			$targets = array( 'bale', 'eitaa' );
+			// نکته (باگ رفع‌شده): قبلاً اینجا بی‌صدا به بله/ایتا هدایت می‌شد —
+			// یعنی پیام «ارسال» می‌شد ولی به مقصد اشتباه. حالا رد شدن ثبت می‌شود.
+			bei()->logger()->log( 'system', 'queue', 'skipped', $text, array( 'reason' => 'no_enabled_targets' ) );
+
+			return false;
 		}
 
 		$options = Bei_Settings::get_options();
@@ -55,17 +59,26 @@ final class Bei_Queue {
 
 		if ( function_exists( 'as_enqueue_async_action' ) ) {
 			// Action Scheduler: ارسال واقعی در پس‌زمینه.
-			as_enqueue_async_action( self::HOOK, array( $text, $targets, 0 ), self::GROUP );
+			$action_id = as_enqueue_async_action( self::HOOK, array( $text, $targets, 0 ), self::GROUP );
+			if ( $action_id ) {
+				bei()->logger()->log( 'system', 'queue', 'queued', $text, array( 'targets' => $targets, 'engine' => 'action-scheduler' ) );
 
-			return true;
+				return true;
+			}
+			// اگر AS ناموفق بود، به WP-Cron می‌افتیم (نه اینکه پیام گم شود).
 		}
 
 		if ( function_exists( 'wp_schedule_single_event' ) ) {
 			// WP-Cron تک‌زمانه: ارسال در اولین درخواست بعدی (خارج از Request فعلی).
-			return wp_schedule_single_event( time() + 2, self::HOOK, array( $text, $targets, 0 ) );
+			$scheduled = wp_schedule_single_event( time() + 2, self::HOOK, array( $text, $targets, 0 ) );
+			if ( $scheduled ) {
+				bei()->logger()->log( 'system', 'queue', 'queued', $text, array( 'targets' => $targets, 'engine' => 'wp-cron' ) );
+
+				return true;
+			}
 		}
 
-		// هیچ صفی در دسترس نیست — ارسال مستقیم تا پیام گم نشود.
+		// هیچ صفی در دسترس نبود — ارسال مستقیم تا پیام گم نشود.
 		return bei()->messenger()->notify( $text, $targets );
 	}
 

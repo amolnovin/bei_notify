@@ -70,6 +70,9 @@ final class Bei_Woo_Statuses {
 		add_action( 'wp_ajax_nopriv_bei_subscribe', array( $this, 'ajax_subscribe' ) );
 		add_action( 'wp_ajax_bei_sub_status', array( $this, 'ajax_status' ) );
 		add_action( 'wp_ajax_nopriv_bei_sub_status', array( $this, 'ajax_status' ) );
+
+		// تست مسیر واقعی وضعیت سفارش (صف ← ارسال).
+		add_action( 'admin_post_bei_wc_test', array( $this, 'handle_wc_test' ) );
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -326,6 +329,15 @@ final class Bei_Woo_Statuses {
 
 			<?php settings_errors( self::PAGE_SLUG ); ?>
 
+			<?php
+			$wc_test_result = get_transient( 'bei_wc_test_result' );
+			if ( $wc_test_result ) {
+				delete_transient( 'bei_wc_test_result' );
+				$wc_test_class = 'ok' === $wc_test_result[0] ? 'notice-success' : 'notice-error';
+				echo '<div class="notice ' . esc_attr( $wc_test_class ) . ' is-dismissible"><p>' . esc_html( $wc_test_result[1] ) . '</p></div>';
+			}
+			?>
+
 			<div class="bei-grid">
 				<div class="bei-main">
 					<form method="post" action="options.php">
@@ -354,6 +366,9 @@ final class Bei_Woo_Statuses {
 										<?php foreach ( array( 'admin' => __( 'پیام‌های مدیر', 'bale-eitaa-notifier' ), 'customer' => __( 'پیام‌های مشتریان', 'bale-eitaa-notifier' ) ) as $side => $side_label ) : ?>
 											<div class="bei-tab-panel<?php echo 'admin' === $side ? ' is-active' : ''; ?>" data-bei-panel="<?php echo esc_attr( $side ); ?>">
 												<p class="bei-hint"><?php printf( /* translators: %s: نام تب */ esc_html__( 'تنظیمات «%s» — برای هر وضعیت: سوییچ، روش ارسال و متن پیام.', 'bale-eitaa-notifier' ), esc_html( $side_label ) ); ?></p>
+											<?php if ( 'customer' === $side ) : ?>
+												<p class="bei-hint">⚠️ <?php esc_html_e( 'پیام مشتریان فقط وقتی ارسال می‌شود که شناسهٔ گفتگوی مشتری ثبت شده باشد (مشتری در تسویه‌حساب «فعال‌سازی اعلان» را زده و Start کرده باشد — ربات خودش نمی‌تواند پیام اول را بدهد). ارسال واتساپ به مشتری با درگاه CallMeBot ممکن نیست (فقط Green API / Ultramsg / Meta). اگر پیامی رد شود، دلیل آن با رویداد customer در «گزارش ارسال» ثبت می‌شود.', 'bale-eitaa-notifier' ); ?></p>
+											<?php endif; ?>
 												<div class="bei-wc-table">
 													<div class="bei-wc-row bei-wc-row--head">
 														<span><?php esc_html_e( 'فعال', 'bale-eitaa-notifier' ); ?></span>
@@ -397,6 +412,15 @@ final class Bei_Woo_Statuses {
 						<div class="bei-save-bar">
 							<?php submit_button( __( 'ذخیره تنظیمات وضعیت‌ها', 'bale-eitaa-notifier' ), 'button button-primary bei-btn bei-btn-primary', 'submit', false ); ?>
 						</div>
+					</form>
+
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<?php wp_nonce_field( 'bei_wc_test', 'bei_wc_test_nonce' ); ?>
+						<input type="hidden" name="action" value="bei_wc_test" />
+						<p>
+							<button class="button bei-btn bei-btn-block" type="submit">📨 <?php esc_html_e( 'ارسال پیام تست از مسیر واقعی وضعیت سفارش (صف)', 'bale-eitaa-notifier' ); ?></button>
+						</p>
+						<p class="bei-hint"><?php esc_html_e( 'این دکمه دقیقاً همان مسیر تغییر وضعیت سفارش را طی می‌کند (صف ← ارسال پس‌زمینه). اگر این پیام رسید ولی اعلان وضعیت‌ها نمی‌رسد، مشکل از شبکه نیست — ردیف‌های وضعیت (سوییچ کلی/تب ادمین/تب مشتری) را بررسی کنید. دلیل هر عدم‌ارسال در «گزارش ارسال» با رویداد customer/queue ثبت می‌شود.', 'bale-eitaa-notifier' ); ?></p>
 					</form>
 				</div>
 
@@ -454,6 +478,60 @@ final class Bei_Woo_Statuses {
 	/* ------------------------------------------------------------------ */
 	/* ارسال پیام (مدل جدید: ادمین و مشتری جدا)                            */
 	/* ------------------------------------------------------------------ */
+
+	/**
+	 * دکمهٔ «تست مسیر واقعی وضعیت سفارش» — همان مسیر تغییر وضعیت
+	 * (صف ← ارسال در پس‌زمینه) را با یک پیام نمونه طی می‌کند؛ اگر این
+	 * پیام برسد ولی اعلان وضعیت‌ها نرسد، مشکل در ردیف‌های تنظیمات است.
+	 */
+	public function handle_wc_test() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'دسترسی غیرمجاز.', 'bale-eitaa-notifier' ) );
+		}
+
+		check_admin_referer( 'bei_wc_test', 'bei_wc_test_nonce' );
+
+		$channels = Bei_Settings::enabled_channels();
+		if ( empty( $channels ) ) {
+			set_transient( 'bei_wc_test_result', array( 'error', __( 'هیچ پیام‌رسان فعالی در تنظیمات اصلی نیست.', 'bale-eitaa-notifier' ) ), 60 );
+			wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		/* translators: %s: نام سایت */
+		$sample = sprintf( __( '🧪 تست مسیر واقعی «وضعیت سفارش» (همان مسیر صف ← ارسال) از سایت: %s — اگر این پیام رسید، مسیر ووکامرس سالم است و مشکل در ردیف‌های تنظیمات است.', 'bale-eitaa-notifier' ), get_bloginfo( 'name' ) );
+
+		$result = bei()->queue()->notify_async( $sample, $channels );
+
+		if ( true === $result ) {
+			$status = 'ok';
+			$note   = __( 'پیام وارد مسیر واقعی شد (صف ← ارسال در پس‌زمینه). چند ثانیه بعد رکوردهای «queued» و سپس «deliver» در گزارش ارسال ظاهر می‌شوند.', 'bale-eitaa-notifier' );
+		} elseif ( is_array( $result ) ) {
+			// صف غیرفعال بود — مستقیم ارسال شد.
+			$errors = array();
+			foreach ( $result as $channel => $r ) {
+				if ( is_wp_error( $r ) ) {
+					$errors[] = $channel . ': ' . $r->get_error_message();
+				}
+			}
+			if ( $errors ) {
+				$status = 'error';
+				$note   = __( 'ارسال مستقیم انجام شد ولی این خطاها برگشت: ', 'bale-eitaa-notifier' ) . implode( ' | ', $errors );
+			} else {
+				$status = 'ok';
+				$note   = __( 'ارسال مستقیم موفق بود — مسیر سالم است.', 'bale-eitaa-notifier' );
+			}
+		} else {
+			$status = 'error';
+			$note   = __( 'پیام وارد صف نشد (هیچ کانال فعالی در مسیر نبود) — گزارش ارسال را ببینید.', 'bale-eitaa-notifier' );
+		}
+
+		bei()->logger()->log( 'system', 'wc_test', $status, $sample );
+		set_transient( 'bei_wc_test_result', array( $status, $note ), 60 );
+
+		wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'admin.php' ) ) );
+		exit;
+	}
 
 	/**
 	 * هوک تغییر وضعیت سفارش.
@@ -598,7 +676,12 @@ final class Bei_Woo_Statuses {
 	}
 
 	/**
-	 * ارسال پیام به مشتری.
+	 * ارسال پیام به مشتری — با لاگ کامل هر نتیجه.
+	 *
+	 * نکتهٔ مهم: این مسیر قبلاً کاملاً بی‌صدا بود (هیچ لاگی نداشت) و نتیجهٔ
+	 * ارسال هم نادیده گرفته می‌شد. از نسخهٔ 3.2.0 هر فراخوانی در «گزارش
+	 * ارسال» با رویداد customer ثبت می‌شود: sent / failed / skipped
+	 * (به‌همراه دلیل: no_chat_id ، no_phone ، callmebot_customer و...).
 	 *
 	 * @param object $order   سفارش.
 	 * @param string $text    متن پیام.
@@ -606,21 +689,38 @@ final class Bei_Woo_Statuses {
 	 * @return bool ارسال شد یا نه.
 	 */
 	public function send_to_customer( $order, $text, $channel ) {
+		$order_id = method_exists( $order, 'get_id' ) ? $order->get_id() : 0;
+
 		if ( 'whatsapp' === $channel ) {
 			$options = Bei_Settings::get_options();
 			if ( 'callmebot' === $options['wa_gateway'] ) {
-				return false; // CallMeBot فقط به شماره فعال‌سازی‌شده خودتان می‌فرستد.
+				// CallMeBot فقط به شمارهٔ فعال‌سازی‌شدهٔ خودتان می‌فرستد.
+				$this->log_customer( $order_id, $channel, 'skipped', 'callmebot_customer', $text );
+
+				return false;
 			}
+
 			$phone = $this->normalize_phone( $order->get_billing_phone() );
 			if ( '' === $phone ) {
+				$this->log_customer( $order_id, $channel, 'skipped', 'no_phone', $text );
+
 				return false;
 			}
 			if ( 'greenapi' === $options['wa_gateway'] ) {
 				$phone .= '@c.us';
 			}
-			bei()->messenger()->send_whatsapp_direct( $phone, $text );
 
-			return true;
+			$result = bei()->messenger()->send_whatsapp_direct( $phone, $text );
+			$this->log_customer(
+				$order_id,
+				$channel,
+				is_wp_error( $result ) ? 'failed' : 'sent',
+				'',
+				$text,
+				is_wp_error( $result ) ? $result->get_error_message() : ''
+			);
+
+			return ! is_wp_error( $result );
 		}
 
 		$chat = $order->get_meta( '_bei_chat_' . $channel );
@@ -628,18 +728,52 @@ final class Bei_Woo_Statuses {
 			$chat = get_user_meta( $order->get_user_id(), 'bei_chat_' . $channel, true );
 		}
 		if ( empty( $chat ) ) {
+			// مشتری هنوز Start نزده / شناسه ثبت نشده — دلیل رد شدن در لاگ ثبت می‌شود.
+			$this->log_customer( $order_id, $channel, 'skipped', 'no_chat_id', $text );
+
 			return false;
 		}
 
 		if ( 'telegram' === $channel ) {
-			bei()->messenger()->send_telegram_direct( $chat, $text );
+			$result = bei()->messenger()->send_telegram_direct( $chat, $text );
 		} elseif ( 'bale' === $channel ) {
-			bei()->messenger()->send_bale_direct( $chat, $text );
+			$result = bei()->messenger()->send_bale_direct( $chat, $text );
 		} else {
-			bei()->messenger()->send_eitaa_direct( $chat, $text );
+			$result = bei()->messenger()->send_eitaa_direct( $chat, $text );
 		}
 
-		return true;
+		$this->log_customer(
+			$order_id,
+			$channel,
+			is_wp_error( $result ) ? 'failed' : 'sent',
+			'',
+			$text,
+			is_wp_error( $result ) ? $result->get_error_message() : ''
+		);
+
+		return ! is_wp_error( $result );
+	}
+
+	/**
+	 * ثبت نتیجهٔ ارسال پیام مشتری در «گزارش ارسال».
+	 *
+	 * @param int    $order_id شناسه سفارش.
+	 * @param string $channel  کانال.
+	 * @param string $status   sent / failed / skipped.
+	 * @param string $reason   دلیل رد شدن (no_chat_id و...).
+	 * @param string $message  خلاصه پیام.
+	 * @param string $error    متن خطا.
+	 */
+	private function log_customer( $order_id, $channel, $status, $reason = '', $message = '', $error = '' ) {
+		$context = array( 'order' => (int) $order_id );
+		if ( '' !== $reason ) {
+			$context['reason'] = $reason;
+		}
+		if ( '' !== $error ) {
+			$context['error'] = $error;
+		}
+
+		bei()->logger()->log( $channel, 'customer', $status, $message, $context );
 	}
 
 	/**
